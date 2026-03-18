@@ -1,0 +1,6 @@
+sia
+sia.exe
+*.exe
+*.tmp
+.DS_Store
+
