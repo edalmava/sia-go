@@ -1,24 +1,17 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-        window.location.href = 'login.html';
+import { checkAuth, hasPermission, initUserInfo, initLogout, initSidebar, getUserData } from '../js/auth.js';
+import { usuarioApi, api } from '../js/api.js';
+import { showToast, escapeHtml, openModal, closeModal, handleApiError } from '../js/ui.js';
+
+let users = [];
+let editingUserId = null;
+let deletingUserId = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (!checkAuth()) {
         return;
     }
 
-    // Verify token and load permissions
-    try {
-        const decoded = jwt_decode(token);
-        const permisos = decoded.permisos || [];
-        localStorage.setItem('userPermissions', JSON.stringify(permisos));
-        localStorage.setItem('userRole', decoded.rol || 'USER');
-    } catch (e) {
-        console.error('Error decoding token:', e);
-    }
-
-    // Check if user has permission to view users
-    const permisos = JSON.parse(localStorage.getItem('userPermissions') || '[]');
-    
-    if (!permisos.includes('usuarios_ver')) {
+    if (!hasPermission('usuarios_ver')) {
         showToast('No tienes permisos para acceder a esta página', 'error');
         setTimeout(() => {
             window.location.href = 'dashboard.html';
@@ -26,92 +19,48 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    // Show menu items based on permissions
-    document.querySelectorAll('.nav-item[data-permiso]').forEach(item => {
-        const permiso = item.dataset.permiso;
-        if (permisos.includes(permiso)) {
-            item.style.display = 'flex';
-        }
-    });
-
-    const username = localStorage.getItem('username') || 'admin';
-    const userRole = localStorage.getItem('userRole') || 'USER';
-    
-    document.getElementById('userName').textContent = username.charAt(0).toUpperCase() + username.slice(1);
-    document.getElementById('userInitial').textContent = username.charAt(0).toUpperCase();
-    
-    // Set role text
-    const roleNames = {
-        'ADMIN': 'Administrador',
-        'DIRECTOR': 'Director',
-        'DOCENTE': 'Docente',
-        'ESTUDIANTE': 'Estudiante',
-        'ACUDIENTE': 'Acudiente',
-        'USER': 'Usuario'
-    };
-    const roleElement = document.querySelector('.user-role');
-    if (roleElement) {
-        roleElement.textContent = roleNames[userRole] || 'Usuario';
-    }
-
-    // Show/hide "Nuevo Usuario" button based on permission
-    const addUserBtn = document.getElementById('addUserBtn');
-    if (addUserBtn) {
-        if (permisos.includes('usuarios_crear')) {
-            addUserBtn.style.display = 'flex';
-        } else {
-            addUserBtn.style.display = 'none';
-        }
-    }
-
-    let users = [];
-    let editingUserId = null;
-    let deletingUserId = null;
-
-    document.getElementById('logoutBtn').addEventListener('click', function(e) {
-        e.preventDefault();
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('username');
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('userPermissions');
-        window.location.href = 'login.html';
-    });
+    initUserInfo();
+    initSidebar();
+    initLogout();
+    initUI();
+    initEventListeners();
 
     loadUsers();
     loadDocentes();
     loadEstudiantes();
-
-    document.getElementById('addUserBtn').addEventListener('click', () => openModal());
-    document.getElementById('closeModal').addEventListener('click', closeModal);
-    document.getElementById('cancelBtn').addEventListener('click', closeModal);
-    document.getElementById('userModal').addEventListener('click', function(e) {
-        if (e.target === this) closeModal();
-    });
-
-    document.getElementById('closePasswordModal').addEventListener('click', closePasswordModal);
-    document.getElementById('cancelPasswordBtn').addEventListener('click', closePasswordModal);
-    document.getElementById('passwordModal').addEventListener('click', function(e) {
-        if (e.target === this) closePasswordModal();
-    });
-
-    document.getElementById('closeDeleteModal').addEventListener('click', closeDeleteModal);
-    document.getElementById('cancelDeleteBtn').addEventListener('click', closeDeleteModal);
-    document.getElementById('deleteModal').addEventListener('click', function(e) {
-        if (e.target === this) closeDeleteModal();
-    });
-
-    document.getElementById('userForm').addEventListener('submit', handleUserSubmit);
-    document.getElementById('passwordForm').addEventListener('submit', handlePasswordSubmit);
-    document.getElementById('confirmDeleteBtn').addEventListener('click', handleDelete);
-
-    document.getElementById('searchInput').addEventListener('input', filterUsers);
 });
 
-const API_URL = '/api/v1';
+function initUI() {
+    const addUserBtn = document.getElementById('addUserBtn');
+    if (addUserBtn && hasPermission('usuarios_crear')) {
+        addUserBtn.style.display = 'inline-flex';
+    }
+}
 
-function hasPermission(permiso) {
-    const permisos = JSON.parse(localStorage.getItem('userPermissions') || '[]');
-    return permisos.includes(permiso);
+function initEventListeners() {
+    document.getElementById('addUserBtn')?.addEventListener('click', () => openUserModal());
+    document.getElementById('closeModal')?.addEventListener('click', closeUserModal);
+    document.getElementById('cancelBtn')?.addEventListener('click', closeUserModal);
+    document.getElementById('userModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'userModal') closeUserModal();
+    });
+
+    document.getElementById('closePasswordModal')?.addEventListener('click', closePasswordModal);
+    document.getElementById('cancelPasswordBtn')?.addEventListener('click', closePasswordModal);
+    document.getElementById('passwordModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'passwordModal') closePasswordModal();
+    });
+
+    document.getElementById('closeDeleteModal')?.addEventListener('click', closeDeleteModal);
+    document.getElementById('cancelDeleteBtn')?.addEventListener('click', closeDeleteModal);
+    document.getElementById('deleteModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'deleteModal') closeDeleteModal();
+    });
+
+    document.getElementById('userForm')?.addEventListener('submit', handleUserSubmit);
+    document.getElementById('passwordForm')?.addEventListener('submit', handlePasswordSubmit);
+    document.getElementById('confirmDeleteBtn')?.addEventListener('click', handleDelete);
+    document.getElementById('searchInput')?.addEventListener('input', filterUsers);
 }
 
 async function loadUsers() {
@@ -119,39 +68,27 @@ async function loadUsers() {
     tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Cargando usuarios...</td></tr>';
 
     try {
-        const token = localStorage.getItem('authToken');
-        const response = await fetch(`${API_URL}/usuarios`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Error al cargar usuarios');
-        }
-
-        const data = await response.json();
+        const data = await usuarioApi.getAll(0, 100);
         users = data.data || [];
         renderUsers(users);
     } catch (error) {
         console.error('Error:', error);
         tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">Error al cargar usuarios</td></tr>';
-        showToast('Error al cargar usuarios', 'error');
+        handleApiError(error, 'Error al cargar usuarios');
     }
 }
 
 function renderUsers(usersToRender) {
     const tbody = document.getElementById('usersTableBody');
+    const canChangePassword = hasPermission('usuarios_cambiar_clave');
+    const canEdit = hasPermission('usuarios_editar');
+    const canDelete = hasPermission('usuarios_eliminar');
     
     if (usersToRender.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No hay usuarios registrados</td></tr>';
         return;
     }
 
-    const canChangePassword = hasPermission('usuarios_cambiar_clave');
-    const canEdit = hasPermission('usuarios_editar');
-    const canDelete = hasPermission('usuarios_eliminar');
-    
     tbody.innerHTML = usersToRender.map(user => {
         const roleName = getRoleName(user.id_rol);
         const roleClass = roleName.toLowerCase();
@@ -231,7 +168,7 @@ function filterUsers() {
     renderUsers(filtered);
 }
 
-function openModal(user = null) {
+function openUserModal(user = null) {
     const modal = document.getElementById('userModal');
     const form = document.getElementById('userForm');
     const title = document.getElementById('modalTitle');
@@ -258,38 +195,41 @@ function openModal(user = null) {
         passwordInput.required = true;
     }
 
-    modal.classList.add('active');
+    openModal(modal);
 }
 
-function closeModal() {
-    document.getElementById('userModal').classList.remove('active');
+function closeUserModal() {
+    closeModal(document.getElementById('userModal'));
     editingUserId = null;
 }
 
-function openPasswordModal(userId, username) {
+window.openPasswordModal = function(userId, username) {
     document.getElementById('passwordUserId').value = userId;
-    document.getElementById('deleteUserName').textContent = username;
-    document.getElementById('passwordForm').reset();
-    document.getElementById('passwordModal').classList.add('active');
-}
+    openModal(document.getElementById('passwordModal'));
+};
 
 function closePasswordModal() {
-    document.getElementById('passwordModal').classList.remove('active');
+    closeModal(document.getElementById('passwordModal'));
 }
 
-function openDeleteModal(userId, username) {
+window.openDeleteModal = function(userId, username) {
     deletingUserId = userId;
     document.getElementById('deleteUserName').textContent = username;
-    document.getElementById('deleteModal').classList.add('active');
-}
+    openModal(document.getElementById('deleteModal'));
+};
 
 function closeDeleteModal() {
-    document.getElementById('deleteModal').classList.remove('active');
+    closeModal(document.getElementById('deleteModal'));
     deletingUserId = null;
 }
 
 async function handleUserSubmit(e) {
     e.preventDefault();
+    
+    if (!hasPermission('usuarios_crear') && !hasPermission('usuarios_editar')) {
+        showToast('No tienes permisos para guardar usuarios', 'error');
+        return;
+    }
     
     const form = e.target;
     const formData = new FormData(form);
@@ -303,12 +243,8 @@ async function handleUserSubmit(e) {
     const idDocente = formData.get('id_docente');
     const idEstudiante = formData.get('id_estudiante');
 
-    if (idDocente) {
-        userData.id_docente = parseInt(idDocente);
-    }
-    if (idEstudiante) {
-        userData.id_estudiante = parseInt(idEstudiante);
-    }
+    if (idDocente) userData.id_docente = parseInt(idDocente);
+    if (idEstudiante) userData.id_estudiante = parseInt(idEstudiante);
 
     if (!editingUserId) {
         userData.clave = formData.get('clave');
@@ -319,38 +255,27 @@ async function handleUserSubmit(e) {
     }
 
     try {
-        const token = localStorage.getItem('authToken');
-        const url = editingUserId 
-            ? `${API_URL}/usuarios/${editingUserId}`
-            : `${API_URL}/usuarios`;
-        
-        const method = editingUserId ? 'PUT' : 'POST';
-
-        const response = await fetch(url, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(userData)
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Error al guardar usuario');
+        if (editingUserId) {
+            await usuarioApi.update(editingUserId, userData);
+            showToast('Usuario actualizado exitosamente', 'success');
+        } else {
+            await usuarioApi.create(userData);
+            showToast('Usuario creado exitosamente', 'success');
         }
-
-        showToast(editingUserId ? 'Usuario actualizado exitosamente' : 'Usuario creado exitosamente', 'success');
-        closeModal();
+        closeUserModal();
         loadUsers();
     } catch (error) {
-        console.error('Error:', error);
-        showToast(error.message, 'error');
+        handleApiError(error, 'Error al guardar usuario');
     }
 }
 
 async function handlePasswordSubmit(e) {
     e.preventDefault();
+    
+    if (!hasPermission('usuarios_cambiar_clave')) {
+        showToast('No tienes permisos para cambiar contraseñas', 'error');
+        return;
+    }
     
     const userId = document.getElementById('passwordUserId').value;
     const newPassword = document.getElementById('newPassword').value;
@@ -367,31 +292,20 @@ async function handlePasswordSubmit(e) {
     }
 
     try {
-        const token = localStorage.getItem('authToken');
-        
-        const response = await fetch(`${API_URL}/usuarios/${userId}/change-password`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ password: newPassword })
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Error al cambiar contraseña');
-        }
-
+        await usuarioApi.changePassword(parseInt(userId), newPassword);
         showToast('Contraseña cambiada exitosamente', 'success');
         closePasswordModal();
     } catch (error) {
-        console.error('Error:', error);
-        showToast(error.message, 'error');
+        handleApiError(error, 'Error al cambiar contraseña');
     }
 }
 
-async function toggleUserStatus(userId, username, currentStatus) {
+window.toggleUserStatus = async function(userId, username, currentStatus) {
+    if (!hasPermission('usuarios_editar')) {
+        showToast('No tienes permisos para editar usuarios', 'error');
+        return;
+    }
+    
     const newStatus = !currentStatus;
     const action = newStatus ? 'activar' : 'desactivar';
     
@@ -400,76 +314,44 @@ async function toggleUserStatus(userId, username, currentStatus) {
     }
 
     try {
-        const token = localStorage.getItem('authToken');
-        
-        const response = await fetch(`${API_URL}/usuarios/${userId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ activo: newStatus })
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || `Error al ${action} usuario`);
-        }
-
+        await usuarioApi.update(userId, { activo: newStatus });
         showToast(`Usuario ${newStatus ? 'activado' : 'desactivado'} exitosamente`, 'success');
         loadUsers();
     } catch (error) {
-        console.error('Error:', error);
-        showToast(error.message, 'error');
+        handleApiError(error, `Error al ${action} usuario`);
     }
-}
+};
 
 async function handleDelete() {
+    if (!hasPermission('usuarios_eliminar')) {
+        showToast('No tienes permisos para eliminar usuarios', 'error');
+        return;
+    }
+    
     if (!deletingUserId) return;
 
     try {
-        const token = localStorage.getItem('authToken');
-        
-        const response = await fetch(`${API_URL}/usuarios/${deletingUserId}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Error al eliminar usuario');
-        }
-
+        await usuarioApi.delete(deletingUserId);
         showToast('Usuario eliminado exitosamente', 'success');
         closeDeleteModal();
         loadUsers();
     } catch (error) {
-        console.error('Error:', error);
-        showToast(error.message, 'error');
+        handleApiError(error, 'Error al eliminar usuario');
     }
 }
 
 async function loadDocentes() {
     try {
-        const token = localStorage.getItem('authToken');
-        const response = await fetch(`${API_URL}/docentes`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+        const data = await api.get('/docentes');
+        const select = document.getElementById('docente');
+        const docentes = data.data || [];
+        
+        docentes.forEach(docente => {
+            const option = document.createElement('option');
+            option.value = docente.id_docente;
+            option.textContent = `${docente.nombres} ${docente.apellidos}`;
+            select.appendChild(option);
         });
-
-        if (response.ok) {
-            const data = await response.json();
-            const select = document.getElementById('docente');
-            const docentes = data.data || [];
-            
-            docentes.forEach(docente => {
-                const option = document.createElement('option');
-                option.value = docente.id_docente;
-                option.textContent = `${docente.nombres} ${docente.apellidos}`;
-                select.appendChild(option);
-            });
-        }
     } catch (error) {
         console.log('Error loading docentes:', error);
     }
@@ -477,54 +359,17 @@ async function loadDocentes() {
 
 async function loadEstudiantes() {
     try {
-        const token = localStorage.getItem('authToken');
-        const response = await fetch(`${API_URL}/estudiantes`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+        const data = await api.get('/estudiantes');
+        const select = document.getElementById('estudiante');
+        const estudiantes = data.data || [];
+        
+        estudiantes.forEach(estudiante => {
+            const option = document.createElement('option');
+            option.value = estudiante.id_estudiante;
+            option.textContent = `${estudiante.nombres} ${estudiante.apellidos}`;
+            select.appendChild(option);
         });
-
-        if (response.ok) {
-            const data = await response.json();
-            const select = document.getElementById('estudiante');
-            const estudiantes = data.data || [];
-            
-            estudiantes.forEach(estudiante => {
-                const option = document.createElement('option');
-                option.value = estudiante.id_estudiante;
-                option.textContent = `${estudiante.nombres} ${estudiante.apellidos}`;
-                select.appendChild(option);
-            });
-        }
     } catch (error) {
         console.log('Error loading estudiantes:', error);
     }
 }
-
-function showToast(message, type = 'success') {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    
-    const icon = type === 'success' 
-        ? '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
-        : '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
-    
-    toast.innerHTML = `${icon}<span class="toast-message">${escapeHtml(message)}</span>`;
-    container.appendChild(toast);
-
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(100%)';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-window.openPasswordModal = openPasswordModal;
-window.openDeleteModal = openDeleteModal;
-window.toggleUserStatus = toggleUserStatus;

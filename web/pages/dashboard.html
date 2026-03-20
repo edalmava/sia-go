@@ -8,8 +8,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/jwt-decode@3.1.2/build/jwt-decode.min.js"></script>
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="../css/01-variables.css">
+    <link rel="stylesheet" href="../css/02-base.css">
+    <link rel="stylesheet" href="../css/03-components.css">
+    <link rel="stylesheet" href="../css/04-layout.css">
 </head>
 <body>
     <div class="dashboard-layout">
@@ -81,7 +83,7 @@
                     </svg>
                     <span>Reportes</span>
                 </a>
-                <a href="usuarios.html" class="nav-item" id="adminUsersLink" style="display: none;" data-permiso="usuarios_ver">
+                <a href="usuarios.html" class="nav-item" id="usersLink" style="display: none;" data-permiso="usuarios_ver">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                         <circle cx="9" cy="7" r="4"/>
@@ -100,7 +102,7 @@
             </nav>
 
             <div class="sidebar-footer">
-                <a href="login.html" class="nav-item logout" id="logoutBtn">
+                <a href="../login.html" class="nav-item logout" id="logoutBtn">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                         <polyline points="16 17 21 12 16 7"/>
@@ -271,27 +273,19 @@
                         <div class="donut-chart">
                             <svg viewBox="0 0 36 36" class="circular-chart">
                                 <path class="circle-bg"
-                                    d="M18 2.0845
-                                    a 15.9155 15.9155 0 0 1 0 31.831
-                                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                                 />
                                 <path class="circle primary"
                                     stroke-dasharray="45, 100"
-                                    d="M18 2.0845
-                                    a 15.9155 15.9155 0 0 1 0 31.831
-                                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                                 />
                                 <path class="circle secondary"
-                                    stroke-darray="30, 100"
-                                    d="M18 2.0845
-                                    a 15.9155 15.9155 0 0 1 0 31.831
-                                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                                    stroke-dasharray="30, 100"
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                                 />
                                 <path class="circle tertiary"
                                     stroke-dasharray="25, 100"
-                                    d="M18 2.0845
-                                    a 15.9155 15.9155 0 0 1 0 31.831
-                                    a 15.9155 15.9155 0 0 1 0 -31.831"
+                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                                 />
                             </svg>
                         </div>
@@ -366,25 +360,12 @@
                             </div>
                             <span class="activity-time">Hace 3 horas</span>
                         </div>
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-                                </svg>
-                            </div>
-                            <div class="activity-content">
-                                <p class="activity-title">Actualización de calificaciones</p>
-                                <p class="activity-desc">Período 2 cerrado exitosamente</p>
-                            </div>
-                            <span class="activity-time">Ayer</span>
-                        </div>
                     </div>
                 </div>
             </section>
         </main>
     </div>
 
-    <script src="js/dashboard.js"></script>
+    <script type="module" src="../js/dashboard.js"></script>
 </body>
 </html>

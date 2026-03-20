@@ -1,37 +1,17 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-        window.location.href = 'login.html';
+import { checkAuth, hasPermission, hasAnyPermission, initUserInfo, initLogout, initSidebar, getUserData } from '../js/auth.js';
+import { rolApi, permisoApi, moduloApi, api } from '../js/api.js';
+import { showToast, escapeHtml, openModal, closeModal, handleApiError } from '../js/ui.js';
+
+let allPermisos = [];
+let allModulos = [];
+let editingRoleId = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (!checkAuth()) {
         return;
     }
 
-    try {
-        const decoded = jwt_decode(token);
-        const permisos = decoded.permisos || [];
-        localStorage.setItem('userPermissions', JSON.stringify(permisos));
-        localStorage.setItem('userRole', decoded.rol || 'USER');
-    } catch (e) {
-        console.error('Error decoding token:', e);
-    }
-
-    const permisos = JSON.parse(localStorage.getItem('userPermissions') || '[]');
-    
-    // Show menu items based on permissions
-    document.querySelectorAll('.nav-item[data-permiso]').forEach(item => {
-        const permiso = item.dataset.permiso;
-        if (permisos.includes(permiso)) {
-            item.style.display = 'flex';
-        }
-    });
-
-    // Check if user has permission to access settings (usuarios, roles, or permisos permissions)
-    const canAccessSettings = permisos.some(p => 
-        p.startsWith('usuarios_') || 
-        p.startsWith('roles_') || 
-        p.startsWith('permisos_')
-    );
-    
-    if (!canAccessSettings) {
+    if (!hasAnyPermission(['usuarios_', 'roles_', 'permisos_'])) {
         showToast('No tienes permisos para acceder a esta página', 'error');
         setTimeout(() => {
             window.location.href = 'dashboard.html';
@@ -39,36 +19,36 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    const username = localStorage.getItem('username') || 'admin';
-    const userRole = localStorage.getItem('userRole') || 'USER';
-    
-    document.getElementById('userName').textContent = username.charAt(0).toUpperCase() + username.slice(1);
-    document.getElementById('userInitial').textContent = username.charAt(0).toUpperCase();
-    
-    const roleNames = {
-        'ADMIN': 'Administrador',
-        'DIRECTOR': 'Director',
-        'DOCENTE': 'Docente',
-        'ESTUDIANTE': 'Estudiante',
-        'ACUDIENTE': 'Acudiente',
-        'USER': 'Usuario'
-    };
-    const roleElement = document.querySelector('.user-role');
-    if (roleElement) {
-        roleElement.textContent = roleNames[userRole] || 'Usuario';
-    }
+    initUserInfo();
+    initSidebar();
+    initLogout();
+    initTabs();
+    initUI();
+    initEventListeners();
 
+    loadRoles();
+    loadPermisos();
+    loadModulos();
+});
+
+function initUI() {
+    const addRoleBtn = document.getElementById('addRoleBtn');
+    if (addRoleBtn) {
+        addRoleBtn.style.display = hasPermission('roles_crear') ? 'inline-flex' : 'none';
+    }
+}
+
+function initTabs() {
     const tabButtons = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
+    const { permissions } = getUserData();
     
-    // Show/hide tabs based on permissions
-    const hasRolesPerms = permisos.some(p => p.startsWith('roles_'));
-    const hasPermisosPerms = permisos.includes('permisos_ver');
+    const hasRolesPerms = hasPermission('roles_ver') || hasPermission('roles_crear') || hasPermission('roles_editar') || hasPermission('roles_eliminar');
+    const hasPermisosPerms = hasPermission('permisos_ver');
     
     tabButtons.forEach(btn => {
         const tabName = btn.dataset.tab;
         
-        // Hide tab if user doesn't have permission
         if (tabName === 'roles' && !hasRolesPerms) {
             btn.style.display = 'none';
             return;
@@ -82,94 +62,55 @@ document.addEventListener('DOMContentLoaded', function() {
             tabButtons.forEach(b => b.classList.remove('active'));
             tabContents.forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
-            document.getElementById(`${btn.dataset.tab}-tab`).classList.add('active');
+            document.getElementById(`${btn.dataset.tab}-tab`)?.classList.add('active');
         });
     });
 
-    // Hide tab contents that user doesn't have permission to view
     if (!hasRolesPerms) {
-        document.getElementById('roles-tab').style.display = 'none';
+        document.getElementById('roles-tab')?.style.setProperty('display', 'none');
     }
     if (!hasPermisosPerms) {
-        document.getElementById('permisos-tab').style.display = 'none';
+        document.getElementById('permisos-tab')?.style.setProperty('display', 'none');
     }
 
-    // If first visible tab is not "roles", switch to it
     const visibleTabs = Array.from(tabButtons).filter(btn => btn.style.display !== 'none');
-    if (visibleTabs.length > 0 && !document.querySelector('.tab-btn.active')?.dataset.tab) {
+    if (visibleTabs.length > 0) {
         visibleTabs[0].classList.add('active');
-        const firstVisibleTabName = visibleTabs[0].dataset.tab;
-        document.getElementById(`${firstVisibleTabName}-tab`).classList.add('active');
+        const firstTabName = visibleTabs[0].dataset.tab;
+        document.getElementById(`${firstTabName}-tab`)?.classList.add('active');
     }
+}
 
-    document.getElementById('logoutBtn').addEventListener('click', function(e) {
-        e.preventDefault();
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('username');
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('userPermissions');
-        window.location.href = 'login.html';
+function initEventListeners() {
+    document.getElementById('addRoleBtn')?.addEventListener('click', () => openRoleModal());
+    document.getElementById('closeRoleModal')?.addEventListener('click', closeRoleModal);
+    document.getElementById('cancelRoleBtn')?.addEventListener('click', closeRoleModal);
+    document.getElementById('roleModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'roleModal') closeRoleModal();
     });
-
-    // Show/hide "Nuevo Rol" button based on permissions
-    const canCreateRoles = permisos.includes('roles_crear');
-    const addRoleBtn = document.getElementById('addRoleBtn');
-    if (addRoleBtn) {
-        addRoleBtn.style.display = canCreateRoles ? 'inline-flex' : 'none';
-    }
-
-    // Show/hide "Nuevo Permiso" button based on permissions (only admin)
-    const addPermisoBtn = document.getElementById('addPermisoBtn');
-    if (addPermisoBtn) {
-        addPermisoBtn.style.display = 'none'; // Hide by default
-    }
-
-    loadRoles();
-    loadPermisos();
-    loadModulos();
-
-    document.getElementById('addRoleBtn').addEventListener('click', () => openRoleModal());
-    document.getElementById('closeRoleModal').addEventListener('click', closeRoleModal);
-    document.getElementById('cancelRoleBtn').addEventListener('click', closeRoleModal);
-    document.getElementById('roleModal').addEventListener('click', function(e) {
-        if (e.target === this) closeRoleModal();
-    });
-    document.getElementById('roleForm').addEventListener('submit', handleRoleSubmit);
-
-    document.getElementById('permisoSearch').addEventListener('input', filterPermisos);
-    document.getElementById('moduloFilter').addEventListener('change', filterPermisos);
-});
-
-const API_URL = '/api/v1';
-
-let allPermisos = [];
-let allModulos = [];
+    document.getElementById('roleForm')?.addEventListener('submit', handleRoleSubmit);
+    document.getElementById('permisoSearch')?.addEventListener('input', filterPermisos);
+    document.getElementById('moduloFilter')?.addEventListener('change', filterPermisos);
+}
 
 async function loadRoles() {
     const tbody = document.getElementById('rolesTableBody');
     tbody.innerHTML = '<tr><td colspan="6" class="loading-cell">Cargando roles...</td></tr>';
 
     try {
-        const token = localStorage.getItem('authToken');
-        const response = await fetch(`${API_URL}/roles`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!response.ok) throw new Error('Error al cargar roles');
-
-        const data = await response.json();
+        const data = await rolApi.getAll();
         renderRoles(data.data || []);
     } catch (error) {
         console.error('Error:', error);
         tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">Error al cargar roles</td></tr>';
+        handleApiError(error, 'Error al cargar roles');
     }
 }
 
 function renderRoles(roles) {
     const tbody = document.getElementById('rolesTableBody');
-    const permisos = JSON.parse(localStorage.getItem('userPermissions') || '[]');
-    const canEditRoles = permisos.includes('roles_editar');
-    const canDeleteRoles = permisos.includes('roles_eliminar');
+    const canEditRoles = hasPermission('roles_editar');
+    const canDeleteRoles = hasPermission('roles_eliminar');
     
     if (roles.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="empty-cell">No hay roles registrados</td></tr>';
@@ -179,7 +120,6 @@ function renderRoles(roles) {
     tbody.innerHTML = roles.map(rol => {
         let actions = '';
         
-        // Edit button - show if user has permission and role is not a system role (or allow editing system role name)
         if (canEditRoles) {
             actions += `
                 <button class="btn-action edit" onclick="openRoleModal(${rol.id_rol}, '${escapeHtml(rol.nombre)}', '${escapeHtml(rol.descripcion || '')}', ${rol.es_rol_sistema})" title="Editar rol">
@@ -190,7 +130,6 @@ function renderRoles(roles) {
                 </button>`;
         }
         
-        // Delete button - show if user has permission and role is not a system role
         if (canDeleteRoles && !rol.es_rol_sistema) {
             actions += `
                 <button class="btn-action delete" onclick="deleteRole(${rol.id_rol}, '${escapeHtml(rol.nombre)}')" title="Eliminar rol">
@@ -223,14 +162,7 @@ async function loadPermisos() {
     tbody.innerHTML = '<tr><td colspan="5" class="loading-cell">Cargando permisos...</td></tr>';
 
     try {
-        const token = localStorage.getItem('authToken');
-        const response = await fetch(`${API_URL}/permisos`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!response.ok) throw new Error('Error al cargar permisos');
-
-        const data = await response.json();
+        const data = await permisoApi.getAll();
         allPermisos = data.data || [];
         
         await loadModulosForFilter();
@@ -238,28 +170,22 @@ async function loadPermisos() {
     } catch (error) {
         console.error('Error:', error);
         tbody.innerHTML = '<tr><td colspan="5" class="empty-cell">Error al cargar permisos</td></tr>';
+        handleApiError(error, 'Error al cargar permisos');
     }
 }
 
 async function loadModulosForFilter() {
     try {
-        const token = localStorage.getItem('authToken');
-        const response = await fetch(`${API_URL}/modulos`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+        const data = await moduloApi.getAll();
+        allModulos = data.data || [];
+        
+        const select = document.getElementById('moduloFilter');
+        allModulos.forEach(modulo => {
+            const option = document.createElement('option');
+            option.value = modulo.id_modulo;
+            option.textContent = modulo.nombre;
+            select.appendChild(option);
         });
-
-        if (response.ok) {
-            const data = await response.json();
-            allModulos = data.data || [];
-            
-            const select = document.getElementById('moduloFilter');
-            allModulos.forEach(modulo => {
-                const option = document.createElement('option');
-                option.value = modulo.id_modulo;
-                option.textContent = modulo.nombre;
-                select.appendChild(option);
-            });
-        }
     } catch (error) {
         console.error('Error loading modulos:', error);
     }
@@ -310,18 +236,12 @@ async function loadModulos() {
     grid.innerHTML = '<div class="loading-card">Cargando módulos...</div>';
 
     try {
-        const token = localStorage.getItem('authToken');
-        const response = await fetch(`${API_URL}/modulos`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!response.ok) throw new Error('Error al cargar módulos');
-
-        const data = await response.json();
+        const data = await moduloApi.getAll();
         renderModulos(data.data || []);
     } catch (error) {
         console.error('Error:', error);
         grid.innerHTML = '<div class="empty-state">Error al cargar módulos</div>';
+        handleApiError(error, 'Error al cargar módulos');
     }
 }
 
@@ -362,10 +282,9 @@ function renderModulos(modulos) {
     `).join('');
 }
 
-let editingRoleId = null;
 let allPermissionsData = [];
 
-async function openRoleModal(roleId = null, nombre = '', descripcion = '', esSistema = false) {
+window.openRoleModal = async function(roleId = null, nombre = '', descripcion = '', esSistema = false) {
     const modal = document.getElementById('roleModal');
     const form = document.getElementById('roleForm');
     const title = document.getElementById('roleModalTitle');
@@ -389,26 +308,19 @@ async function openRoleModal(roleId = null, nombre = '', descripcion = '', esSis
         loadAllPermissions();
     }
 
-    modal.classList.add('active');
-}
+    openModal(modal);
+};
 
 function closeRoleModal() {
-    document.getElementById('roleModal').classList.remove('active');
+    closeModal(document.getElementById('roleModal'));
     editingRoleId = null;
 }
 
 async function loadAllPermissions() {
     try {
-        const token = localStorage.getItem('authToken');
-        const response = await fetch(`${API_URL}/permisos`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            allPermissionsData = data.data || [];
-            renderPermissionsGrid([]);
-        }
+        const data = await permisoApi.getAll();
+        allPermissionsData = data.data || [];
+        renderPermissionsGrid([]);
     } catch (error) {
         console.error('Error loading permissions:', error);
     }
@@ -416,21 +328,14 @@ async function loadAllPermissions() {
 
 async function loadPermissionsForRole(roleId) {
     try {
-        const token = localStorage.getItem('authToken');
-        
-        const [permisosRes, roleRes] = await Promise.all([
-            fetch(`${API_URL}/permisos`, { headers: { 'Authorization': `Bearer ${token}` } }),
-            fetch(`${API_URL}/roles/${roleId}`, { headers: { 'Authorization': `Bearer ${token}` } })
+        const [permisosData, roleData] = await Promise.all([
+            permisoApi.getAll(),
+            rolApi.getById(roleId)
         ]);
-
-        if (permisosRes.ok && roleRes.ok) {
-            const permisosData = await permisosRes.json();
-            const roleData = await roleRes.json();
-            
-            allPermissionsData = permisosData.data || [];
-            const rolePermisos = roleData.data?.permisos || [];
-            renderPermissionsGrid(rolePermisos);
-        }
+        
+        allPermissionsData = permisosData.data || [];
+        const rolePermisos = roleData.data?.permisos || [];
+        renderPermissionsGrid(rolePermisos);
     } catch (error) {
         console.error('Error loading permissions for role:', error);
     }
@@ -452,7 +357,7 @@ function renderPermissionsGrid(selectedPermisos) {
     });
 
     let html = '';
-    Object.entries(modulosMap).forEach(([idModulo, modulo]) => {
+    Object.entries(modulosMap).forEach(([, modulo]) => {
         html += `<div class="permission-module-header">${escapeHtml(modulo.nombre)}</div>`;
         modulo.permisos.forEach(p => {
             const checked = selectedIds.includes(p.id_permiso) ? 'checked' : '';
@@ -471,9 +376,7 @@ function renderPermissionsGrid(selectedPermisos) {
 async function handleRoleSubmit(e) {
     e.preventDefault();
     
-    // Check permission
-    const userPermissions = JSON.parse(localStorage.getItem('userPermissions') || '[]');
-    if (!userPermissions.includes('roles_crear') && !userPermissions.includes('roles_editar')) {
+    if (!hasPermission('roles_crear') && !hasPermission('roles_editar')) {
         showToast('No tienes permisos para guardar roles', 'error');
         return;
     }
@@ -491,40 +394,22 @@ async function handleRoleSubmit(e) {
     const permisos = Array.from(permisosCheckboxes).map(cb => parseInt(cb.value));
 
     try {
-        const token = localStorage.getItem('authToken');
-        const url = editingRoleId 
-            ? `${API_URL}/roles/${editingRoleId}`
-            : `${API_URL}/roles`;
-        
-        const method = editingRoleId ? 'PUT' : 'POST';
-
-        const response = await fetch(url, {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ ...roleData, permisos })
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Error al guardar rol');
+        if (editingRoleId) {
+            await rolApi.update(editingRoleId, { ...roleData, permisos });
+            showToast('Rol actualizado exitosamente', 'success');
+        } else {
+            await rolApi.create({ ...roleData, permisos });
+            showToast('Rol creado exitosamente', 'success');
         }
-
-        showToast(editingRoleId ? 'Rol actualizado exitosamente' : 'Rol creado exitosamente', 'success');
         closeRoleModal();
         loadRoles();
     } catch (error) {
-        console.error('Error:', error);
-        showToast(error.message, 'error');
+        handleApiError(error, 'Error al guardar rol');
     }
 }
 
-async function deleteRole(roleId, nombre) {
-    // Check permission
-    const userPermissions = JSON.parse(localStorage.getItem('userPermissions') || '[]');
-    if (!userPermissions.includes('roles_eliminar')) {
+window.deleteRole = async function(roleId, nombre) {
+    if (!hasPermission('roles_eliminar')) {
         showToast('No tienes permisos para eliminar roles', 'error');
         return;
     }
@@ -534,51 +419,10 @@ async function deleteRole(roleId, nombre) {
     }
 
     try {
-        const token = localStorage.getItem('authToken');
-        
-        const response = await fetch(`${API_URL}/roles/${roleId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Error al eliminar rol');
-        }
-
+        await rolApi.delete(roleId);
         showToast('Rol eliminado exitosamente', 'success');
         loadRoles();
     } catch (error) {
-        console.error('Error:', error);
-        showToast(error.message, 'error');
+        handleApiError(error, 'Error al eliminar rol');
     }
-}
-
-function showToast(message, type = 'success') {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    
-    const icon = type === 'success' 
-        ? '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
-        : '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
-    
-    toast.innerHTML = `${icon}<span class="toast-message">${escapeHtml(message)}</span>`;
-    container.appendChild(toast);
-
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(100%)';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-window.openRoleModal = openRoleModal;
-window.deleteRole = deleteRole;
+};

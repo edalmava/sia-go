@@ -1,0 +1,88 @@
+/* ============================================
+   CSS Variables - Design Tokens
+   ============================================ */
+
+:root {
+    /* Colors - Primary */
+    --bg-primary: #0f0f1a;
+    --bg-secondary: #1a1a2e;
+    --bg-card: #16162a;
+    --bg-card-hover: #1e1e36;
+    
+    /* Colors - Accent */
+    --accent-gold: #e8d5b7;
+    --accent-gold-light: #f5ebe0;
+    --accent-gold-dark: #c4a77d;
+    
+    /* Colors - Text */
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0b8;
+    --text-muted: #6b6b80;
+    
+    /* Colors - Border */
+    --border-color: rgba(232, 213, 183, 0.1);
+    --border-hover: rgba(232, 213, 183, 0.25);
+    
+    /* Colors - Semantic */
+    --error: #ff6b6b;
+    --success: #4ecdc4;
+    --warning: #ff9f43;
+    --info: #78a9ff;
+    
+    /* Colors - Chart */
+    --chart-primary: var(--accent-gold);
+    --chart-secondary: var(--success);
+    --chart-tertiary: #a45ee5;
+    --chart-quaternary: var(--warning);
+    
+    /* Typography */
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    
+    /* Font Sizes */
+    --text-xs: 0.75rem;
+    --text-sm: 0.85rem;
+    --text-base: 0.95rem;
+    --text-lg: 1.1rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: 2rem;
+    
+    /* Spacing */
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --space-2xl: 3rem;
+    
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 10px;
+    --radius-2xl: 12px;
+    --radius-3xl: 16px;
+    --radius-full: 9999px;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.25);
+    --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.3);
+    --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    
+    /* Transitions */
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.15s ease;
+    --transition-slow: all 0.5s ease;
+    
+    /* Layout */
+    --sidebar-width: 260px;
+    --header-height: auto;
+    
+    /* Z-index */
+    --z-dropdown: 100;
+    --z-sticky: 200;
+    --z-modal: 1000;
+    --z-toast: 2000;
+}
