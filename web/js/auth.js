@@ -60,12 +60,22 @@ export function hasAnyPermissionPrefix(prefixes) {
     return prefixes.some(prefix => permissions.some(p => p.startsWith(prefix)));
 }
 
-export function logout() {
+export function logout(redirectTo = null) {
     localStorage.removeItem(STORAGE_KEYS.TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USERNAME);
     localStorage.removeItem(STORAGE_KEYS.ROLE);
     localStorage.removeItem(STORAGE_KEYS.PERMISSIONS);
-    window.location.href = 'login.html';
+    
+    if (redirectTo) {
+        window.location.href = redirectTo;
+    } else {
+        const currentPath = window.location.pathname;
+        if (currentPath.includes('/pages/')) {
+            window.location.href = '../login.html';
+        } else {
+            window.location.href = 'login.html';
+        }
+    }
 }
 
 export function initUserInfo() {
