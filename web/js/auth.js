@@ -55,6 +55,11 @@ export function hasPermissionPrefix(prefix) {
     return permissions.some(p => p.startsWith(prefix));
 }
 
+export function hasAnyPermissionPrefix(prefixes) {
+    const { permissions } = getUserData();
+    return prefixes.some(prefix => permissions.some(p => p.startsWith(prefix)));
+}
+
 export function logout() {
     localStorage.removeItem(STORAGE_KEYS.TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USERNAME);

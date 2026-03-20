@@ -1,4 +1,4 @@
-import { checkAuth, hasPermission, hasAnyPermission, initUserInfo, initLogout, initSidebar, getUserData } from '../js/auth.js';
+import { checkAuth, hasPermission, hasAnyPermissionPrefix, initUserInfo, initLogout, initSidebar, getUserData } from '../js/auth.js';
 import { rolApi, permisoApi, moduloApi, api } from '../js/api.js';
 import { showToast, escapeHtml, openModal, closeModal, handleApiError } from '../js/ui.js';
 
@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    if (!hasAnyPermission(['usuarios_', 'roles_', 'permisos_'])) {
+    if (!hasAnyPermissionPrefix(['usuarios_', 'roles_', 'permisos_'])) {
         showToast('No tienes permisos para acceder a esta página', 'error');
         setTimeout(() => {
             window.location.href = 'dashboard.html';
