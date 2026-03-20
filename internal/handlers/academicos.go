@@ -421,8 +421,7 @@ func (h *UsuarioHandler) Create(c echo.Context) error {
 			claims.NombreUsuario, claims.IDUsuario, u.NombreUsuario, u.IDUsuario)
 	}
 
-	u.Clave = ""
-	return c.JSON(http.StatusCreated, u)
+	return c.JSON(http.StatusCreated, u.ToResponse())
 }
 
 func (h *UsuarioHandler) Update(c echo.Context) error {
@@ -468,7 +467,7 @@ func (h *UsuarioHandler) Update(c echo.Context) error {
 			claims.NombreUsuario, claims.IDUsuario, id)
 	}
 
-	return c.JSON(http.StatusOK, u)
+	return c.JSON(http.StatusOK, u.ToResponse())
 }
 
 func (h *UsuarioHandler) Delete(c echo.Context) error {

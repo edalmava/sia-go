@@ -3,4 +3,5 @@ sia.exe
 *.exe
 *.tmp
 .DS_Store
+.env
 

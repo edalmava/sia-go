@@ -31,9 +31,9 @@ func (r *UsuarioRepository) GetByUsername(username string) (*models.Usuario, err
 	return &u, nil
 }
 
-func (r *UsuarioRepository) GetAll(offset, limit int) ([]models.Usuario, int, error) {
+func (r *UsuarioRepository) GetAll(offset, limit int) ([]models.UsuarioResponse, int, error) {
 	rows, err := r.db.Query(
-		`SELECT id_usuario, nombre_usuario, clave, id_docente, id_estudiante, activo, id_rol 
+		`SELECT id_usuario, nombre_usuario, id_docente, id_estudiante, activo, id_rol 
 		 FROM usuarios ORDER BY nombre_usuario LIMIT $1 OFFSET $2`,
 		limit, offset,
 	)
@@ -42,10 +42,10 @@ func (r *UsuarioRepository) GetAll(offset, limit int) ([]models.Usuario, int, er
 	}
 	defer rows.Close()
 
-	var usuarios []models.Usuario
+	var usuarios []models.UsuarioResponse
 	for rows.Next() {
-		var u models.Usuario
-		if err := rows.Scan(&u.IDUsuario, &u.NombreUsuario, &u.Clave, &u.IDDocente, &u.IDEstudiante, &u.Activo, &u.IDRol); err != nil {
+		var u models.UsuarioResponse
+		if err := rows.Scan(&u.IDUsuario, &u.NombreUsuario, &u.IDDocente, &u.IDEstudiante, &u.Activo, &u.IDRol); err != nil {
 			return nil, 0, err
 		}
 		usuarios = append(usuarios, u)
@@ -66,13 +66,13 @@ func (r *UsuarioRepository) Create(u *models.Usuario) error {
 	).Scan(&u.IDUsuario)
 }
 
-func (r *UsuarioRepository) GetByID(id int) (*models.Usuario, error) {
-	var u models.Usuario
+func (r *UsuarioRepository) GetByID(id int) (*models.UsuarioResponse, error) {
+	var u models.UsuarioResponse
 	err := r.db.QueryRow(
-		`SELECT id_usuario, nombre_usuario, clave, id_docente, id_estudiante, activo, id_rol 
+		`SELECT id_usuario, nombre_usuario, id_docente, id_estudiante, activo, id_rol 
 		 FROM usuarios WHERE id_usuario = $1`,
 		id,
-	).Scan(&u.IDUsuario, &u.NombreUsuario, &u.Clave, &u.IDDocente, &u.IDEstudiante, &u.Activo, &u.IDRol)
+	).Scan(&u.IDUsuario, &u.NombreUsuario, &u.IDDocente, &u.IDEstudiante, &u.Activo, &u.IDRol)
 
 	if err == sql.ErrNoRows {
 		return nil, nil

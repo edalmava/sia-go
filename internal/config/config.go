@@ -34,6 +34,11 @@ type DatabaseConfig struct {
 }
 
 func Load() *Config {
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		panic("FATAL: JWT_SECRET environment variable is required for security")
+	}
+
 	return &Config{
 		Server: ServerConfig{
 			Port:         getEnv("SERVER_PORT", "8080"),
@@ -41,7 +46,7 @@ func Load() *Config {
 			WriteTimeout: 30 * time.Second,
 		},
 		JWT: JWTConfig{
-			Secret:          getEnv("JWT_SECRET", "supersecretkey-change-in-production"),
+			Secret:          jwtSecret,
 			ExpirationHours: getEnvInt("JWT_EXPIRATION_HOURS", 24),
 			RefreshHours:    getEnvInt("JWT_REFRESH_HOURS", 168),
 		},

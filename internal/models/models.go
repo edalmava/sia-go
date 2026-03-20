@@ -218,11 +218,39 @@ type ActividadRecuperacion struct {
 type Usuario struct {
 	IDUsuario     int    `json:"id_usuario" db:"id_usuario"`
 	NombreUsuario string `json:"nombre_usuario" db:"nombre_usuario" validate:"required,min=5,max=50,regex=^[a-zA-Z0-9_]+$"`
-	Clave         string `json:"clave" db:"clave" validate:"required,min=8,max=64"`
+	Clave         string `json:"-" db:"clave" validate:"required,min=8,max=64"`
 	IDDocente     *int   `json:"id_docente" db:"id_docente"`
 	IDEstudiante  *int   `json:"id_estudiante" db:"id_estudiante"`
 	Activo        bool   `json:"activo" db:"activo"`
 	IDRol         int    `json:"id_rol" db:"id_rol" validate:"required"`
+}
+
+type UsuarioResponse struct {
+	IDUsuario     int    `json:"id_usuario"`
+	NombreUsuario string `json:"nombre_usuario"`
+	IDDocente     *int   `json:"id_docente,omitempty"`
+	IDEstudiante  *int   `json:"id_estudiante,omitempty"`
+	Activo        bool   `json:"activo"`
+	IDRol         int    `json:"id_rol"`
+}
+
+func (u *Usuario) ToResponse() UsuarioResponse {
+	return UsuarioResponse{
+		IDUsuario:     u.IDUsuario,
+		NombreUsuario: u.NombreUsuario,
+		IDDocente:     u.IDDocente,
+		IDEstudiante:  u.IDEstudiante,
+		Activo:        u.Activo,
+		IDRol:         u.IDRol,
+	}
+}
+
+func UsuariosToResponse(usuarios []Usuario) []UsuarioResponse {
+	result := make([]UsuarioResponse, len(usuarios))
+	for i, u := range usuarios {
+		result[i] = u.ToResponse()
+	}
+	return result
 }
 
 type Rol struct {
