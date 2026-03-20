@@ -7,10 +7,22 @@ const STORAGE_KEYS = {
     PERMISSIONS: 'userPermissions'
 };
 
-export function checkAuth(redirectTo = 'login.html') {
+function getLoginPath() {
+    const currentPath = window.location.pathname;
+    if (currentPath.includes('/pages/')) {
+        return '../login.html';
+    }
+    return 'login.html';
+}
+
+export function checkAuth(redirectTo = null) {
     const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
     if (!token) {
-        window.location.href = redirectTo;
+        if (redirectTo) {
+            window.location.href = redirectTo;
+        } else {
+            window.location.href = getLoginPath();
+        }
         return false;
     }
 
