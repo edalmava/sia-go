@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/edalmava/sia/internal/middleware"
 	"github.com/edalmava/sia/internal/models"
@@ -345,70 +344,53 @@ func (h *UsuarioHandler) GetByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, usuario)
 }
 
-func hasPermission(permisos []string, permiso string) bool {
-	for _, p := range permisos {
-		if p == permiso {
-			return true
-		}
-	}
-	return false
-}
-
-func checkPermission(c echo.Context, permiso string) bool {
-	claims := middleware.GetClaims(c)
-	if claims == nil {
-		return false
-	}
-	return hasPermission(claims.Permisos, permiso)
-}
-
 func (h *UsuarioHandler) Create(c echo.Context) error {
 	if h.repo == nil {
 		return dbUnavailable(c)
 	}
 
-	if !checkPermission(c, "usuarios_crear") {
-		return c.JSON(http.StatusForbidden, models.ErrorResponse{
-			Error:   "forbidden",
-			Message: "No tienes permisos para crear usuarios",
-		})
-	}
-
-	var u models.Usuario
-	if err := c.Bind(&u); err != nil {
+	var req models.UsuarioCreateRequest
+	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error:   "validation_error",
 			Message: "Error en los datos de entrada",
 		})
 	}
 
-	if u.Clave == "" {
+	if err := c.Validate(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error:   "validation_error",
-			Message: "La contraseña es requerida",
+			Message: err.Error(),
 		})
 	}
 
-	hash, err := utils.HashPassword(u.Clave)
+	hash, err := utils.HashPassword(req.Clave)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "internal_error",
 			Message: "Error al procesar la contraseña",
 		})
 	}
-	u.Clave = hash
+
+	u := models.Usuario{
+		NombreUsuario: req.NombreUsuario,
+		Clave:         hash,
+		IDDocente:     req.IDDocente,
+		IDEstudiante:  req.IDEstudiante,
+		Activo:        req.Activo,
+		IDRol:         req.IDRol,
+	}
+
+	existing, _ := h.repo.GetByUsername(req.NombreUsuario)
+	if existing != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "El nombre de usuario ya existe",
+		})
+	}
 
 	if err := h.repo.Create(&u); err != nil {
 		c.Logger().Errorf("Error creating usuario: %v", err)
-
-		errStr := err.Error()
-		if strings.Contains(errStr, "usuarios_nombre_usuario_key") || strings.Contains(errStr, "duplicate key") {
-			return c.JSON(http.StatusBadRequest, models.ErrorResponse{
-				Error:   "validation_error",
-				Message: "El nombre de usuario ya existe",
-			})
-		}
-
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "internal_error",
 			Message: "Error al crear el usuario",
@@ -429,13 +411,6 @@ func (h *UsuarioHandler) Update(c echo.Context) error {
 		return dbUnavailable(c)
 	}
 
-	if !checkPermission(c, "usuarios_editar") {
-		return c.JSON(http.StatusForbidden, models.ErrorResponse{
-			Error:   "forbidden",
-			Message: "No tienes permisos para actualizar usuarios",
-		})
-	}
-
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
@@ -444,15 +419,29 @@ func (h *UsuarioHandler) Update(c echo.Context) error {
 		})
 	}
 
-	var u models.Usuario
-	if err := c.Bind(&u); err != nil {
+	var req models.UsuarioUpdateRequest
+	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error:   "validation_error",
 			Message: "Error en los datos de entrada",
 		})
 	}
 
-	u.IDUsuario = id
+	if err := c.Validate(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: err.Error(),
+		})
+	}
+
+	u := models.Usuario{
+		IDUsuario:     id,
+		NombreUsuario: req.NombreUsuario,
+		IDDocente:     req.IDDocente,
+		IDEstudiante:  req.IDEstudiante,
+		Activo:        req.Activo,
+		IDRol:         req.IDRol,
+	}
 
 	if err := h.repo.Update(&u); err != nil {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
@@ -473,13 +462,6 @@ func (h *UsuarioHandler) Update(c echo.Context) error {
 func (h *UsuarioHandler) Delete(c echo.Context) error {
 	if h.repo == nil {
 		return dbUnavailable(c)
-	}
-
-	if !checkPermission(c, "usuarios_eliminar") {
-		return c.JSON(http.StatusForbidden, models.ErrorResponse{
-			Error:   "forbidden",
-			Message: "No tienes permisos para eliminar usuarios",
-		})
 	}
 
 	id, err := strconv.Atoi(c.Param("id"))
@@ -505,7 +487,7 @@ func (h *UsuarioHandler) Delete(c echo.Context) error {
 		})
 	}
 
-	if claims := middleware.GetClaims(c); claims != nil {
+	if claims != nil {
 		c.Logger().Infof("AUDIT: Usuario '%s' (ID: %d) eliminó usuario ID: %d",
 			claims.NombreUsuario, claims.IDUsuario, id)
 	}
@@ -534,8 +516,14 @@ func (h *UsuarioHandler) ChangePassword(c echo.Context) error {
 		})
 	}
 
-	hasPermiso := checkPermission(c, "usuarios_cambiar_clave")
 	isOwnPassword := claims.IDUsuario == targetID
+	hasPermiso := false
+	for _, p := range claims.Permisos {
+		if p == "usuarios_cambiar_clave" {
+			hasPermiso = true
+			break
+		}
+	}
 
 	if !hasPermiso && !isOwnPassword {
 		return c.JSON(http.StatusForbidden, models.ErrorResponse{
@@ -545,12 +533,19 @@ func (h *UsuarioHandler) ChangePassword(c echo.Context) error {
 	}
 
 	var req struct {
-		Password string `json:"password"`
+		Password string `json:"password" validate:"required,min=8,max=64"`
 	}
-	if err := c.Bind(&req); err != nil || req.Password == "" {
+	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error:   "validation_error",
-			Message: "Contraseña requerida",
+			Message: "Error en los datos de entrada",
+		})
+	}
+
+	if err := c.Validate(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: err.Error(),
 		})
 	}
 

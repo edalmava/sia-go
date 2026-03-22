@@ -234,6 +234,23 @@ type UsuarioResponse struct {
 	IDRol         int    `json:"id_rol"`
 }
 
+type UsuarioCreateRequest struct {
+	NombreUsuario string `json:"nombre_usuario" validate:"required,min=5,max=50"`
+	Clave         string `json:"clave" validate:"required,min=8,max=64"`
+	IDDocente     *int   `json:"id_docente,omitempty"`
+	IDEstudiante  *int   `json:"id_estudiante,omitempty"`
+	Activo        bool   `json:"activo"`
+	IDRol         int    `json:"id_rol" validate:"required"`
+}
+
+type UsuarioUpdateRequest struct {
+	NombreUsuario string `json:"nombre_usuario" validate:"required,min=5,max=50"`
+	IDDocente     *int   `json:"id_docente,omitempty"`
+	IDEstudiante  *int   `json:"id_estudiante,omitempty"`
+	Activo        bool   `json:"activo"`
+	IDRol         int    `json:"id_rol" validate:"required"`
+}
+
 func (u *Usuario) ToResponse() UsuarioResponse {
 	return UsuarioResponse{
 		IDUsuario:     u.IDUsuario,

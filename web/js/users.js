@@ -1,6 +1,6 @@
 import { checkAuth, hasPermission, initUserInfo, initLogout, initSidebar, getUserData } from '../js/auth.js';
-import { usuarioApi, api } from '../js/api.js';
-import { showToast, escapeHtml, openModal, closeModal, handleApiError } from '../js/ui.js';
+import { usuarioApi, rolApi, api } from '../js/api.js';
+import { showToast, escapeHtml, openModal, closeModal, handleApiError, createStatusBadge, createRoleBadge } from '../js/ui.js';
 
 let users = [];
 let editingUserId = null;
@@ -26,9 +26,31 @@ document.addEventListener('DOMContentLoaded', () => {
     initEventListeners();
 
     loadUsers();
+    loadRoles();
     loadDocentes();
     loadEstudiantes();
 });
+
+async function loadRoles() {
+    try {
+        const data = await rolApi.getAll();
+        const select = document.getElementById('role');
+        if (!select) return;
+
+        const roles = data.data || [];
+        // Limpiamos las opciones actuales (excepto la primera)
+        select.innerHTML = '<option value="">Seleccione un rol</option>';
+        
+        roles.forEach(rol => {
+            const option = document.createElement('option');
+            option.value = rol.id_rol;
+            option.textContent = rol.nombre;
+            select.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error loading roles:', error);
+    }
+}
 
 function initUI() {
     const addUserBtn = document.getElementById('addUserBtn');
@@ -97,8 +119,8 @@ function renderUsers(usersToRender) {
         
         if (canChangePassword) {
             actionButtons += `
-                <button class="btn-action edit" onclick="openPasswordModal(${user.id_usuario}, '${escapeHtml(user.nombre_usuario)}')" title="Cambiar contraseña">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <button class="btn btn-icon btn-ghost" onclick="openPasswordModal(${user.id_usuario}, '${escapeHtml(user.nombre_usuario)}')" title="Cambiar contraseña">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
                         <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                         <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                     </svg>
@@ -107,13 +129,13 @@ function renderUsers(usersToRender) {
         
         if (canEdit) {
             actionButtons += `
-                <button class="btn-action ${user.activo ? 'deactivate' : 'activate'}" onclick="toggleUserStatus(${user.id_usuario}, '${escapeHtml(user.nombre_usuario)}', ${user.activo})" title="${user.activo ? 'Desactivar' : 'Activar'} usuario">
+                <button class="btn btn-icon btn-ghost" onclick="toggleUserStatus(${user.id_usuario}, '${escapeHtml(user.nombre_usuario)}', ${user.activo})" title="${user.activo ? 'Desactivar' : 'Activar'} usuario">
                     ${user.activo 
-                        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
                             <circle cx="12" cy="12" r="10"/>
                             <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
                            </svg>`
-                        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
                             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                             <polyline points="22 4 12 14.01 9 11.01"/>
                            </svg>`
@@ -123,10 +145,9 @@ function renderUsers(usersToRender) {
         
         if (canDelete) {
             actionButtons += `
-                <button class="btn-action delete" onclick="openDeleteModal(${user.id_usuario}, '${escapeHtml(user.nombre_usuario)}')" title="Eliminar usuario">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="3 6 5 6 21 6"/>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                <button class="btn btn-icon btn-ghost" style="color: var(--error);" onclick="openDeleteModal(${user.id_usuario}, '${escapeHtml(user.nombre_usuario)}')" title="Eliminar usuario">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+                        <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
                     </svg>
                 </button>`;
         }
@@ -134,8 +155,8 @@ function renderUsers(usersToRender) {
         return `
             <tr>
                 <td><strong>${escapeHtml(user.nombre_usuario)}</strong></td>
-                <td><span class="role-badge ${roleClass}">${roleName}</span></td>
-                <td><span class="status-badge ${user.activo ? 'active' : 'inactive'}">${user.activo ? 'Activo' : 'Inactivo'}</span></td>
+                <td>${createRoleBadge(roleName)}</td>
+                <td>${createStatusBadge(user.activo)}</td>
                 <td>${user.id_docente ? `#${user.id_docente}` : '-'}</td>
                 <td>${user.id_estudiante ? `#${user.id_estudiante}` : '-'}</td>
                 <td>
@@ -226,12 +247,18 @@ function closeDeleteModal() {
 async function handleUserSubmit(e) {
     e.preventDefault();
     
+    const form = e.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    
+    if (submitBtn.disabled) return;
+    submitBtn.disabled = true;
+    
     if (!hasPermission('usuarios_crear') && !hasPermission('usuarios_editar')) {
         showToast('No tienes permisos para guardar usuarios', 'error');
+        submitBtn.disabled = false;
         return;
     }
     
-    const form = e.target;
     const formData = new FormData(form);
     
     const userData = {
@@ -250,6 +277,7 @@ async function handleUserSubmit(e) {
         userData.clave = formData.get('clave');
         if (!userData.clave) {
             showToast('La contraseña es obligatoria', 'error');
+            submitBtn.disabled = false;
             return;
         }
     }
@@ -266,14 +294,23 @@ async function handleUserSubmit(e) {
         loadUsers();
     } catch (error) {
         handleApiError(error, 'Error al guardar usuario');
+    } finally {
+        submitBtn.disabled = false;
     }
 }
 
 async function handlePasswordSubmit(e) {
     e.preventDefault();
     
+    const form = e.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    
+    if (submitBtn.disabled) return;
+    submitBtn.disabled = true;
+    
     if (!hasPermission('usuarios_cambiar_clave')) {
         showToast('No tienes permisos para cambiar contraseñas', 'error');
+        submitBtn.disabled = false;
         return;
     }
     
@@ -283,11 +320,13 @@ async function handlePasswordSubmit(e) {
 
     if (newPassword !== confirmPassword) {
         showToast('Las contraseñas no coinciden', 'error');
+        submitBtn.disabled = false;
         return;
     }
 
     if (newPassword.length < 8) {
         showToast('La contraseña debe tener al menos 8 caracteres', 'error');
+        submitBtn.disabled = false;
         return;
     }
 
@@ -297,6 +336,8 @@ async function handlePasswordSubmit(e) {
         closePasswordModal();
     } catch (error) {
         handleApiError(error, 'Error al cambiar contraseña');
+    } finally {
+        submitBtn.disabled = false;
     }
 }
 
@@ -306,6 +347,12 @@ window.toggleUserStatus = async function(userId, username, currentStatus) {
         return;
     }
     
+    const user = users.find(u => u.id_usuario === userId);
+    if (!user) {
+        showToast('No se encontró la información del usuario', 'error');
+        return;
+    }
+
     const newStatus = !currentStatus;
     const action = newStatus ? 'activar' : 'desactivar';
     
@@ -314,7 +361,13 @@ window.toggleUserStatus = async function(userId, username, currentStatus) {
     }
 
     try {
-        await usuarioApi.update(userId, { activo: newStatus });
+        await usuarioApi.update(userId, {
+            nombre_usuario: user.nombre_usuario,
+            id_rol: user.id_rol,
+            id_docente: user.id_docente,
+            id_estudiante: user.id_estudiante,
+            activo: newStatus
+        });
         showToast(`Usuario ${newStatus ? 'activado' : 'desactivado'} exitosamente`, 'success');
         loadUsers();
     } catch (error) {
@@ -323,12 +376,20 @@ window.toggleUserStatus = async function(userId, username, currentStatus) {
 };
 
 async function handleDelete() {
+    const deleteBtn = document.getElementById('confirmDeleteBtn');
+    if (deleteBtn.disabled) return;
+    deleteBtn.disabled = true;
+    
     if (!hasPermission('usuarios_eliminar')) {
         showToast('No tienes permisos para eliminar usuarios', 'error');
+        deleteBtn.disabled = false;
         return;
     }
     
-    if (!deletingUserId) return;
+    if (!deletingUserId) {
+        deleteBtn.disabled = false;
+        return;
+    }
 
     try {
         await usuarioApi.delete(deletingUserId);
@@ -337,6 +398,8 @@ async function handleDelete() {
         loadUsers();
     } catch (error) {
         handleApiError(error, 'Error al eliminar usuario');
+    } finally {
+        deleteBtn.disabled = false;
     }
 }
 

@@ -5,6 +5,7 @@ import { showToast, escapeHtml, openModal, closeModal, handleApiError } from '..
 let allPermisos = [];
 let allModulos = [];
 let editingRoleId = null;
+let allPermissionsData = []; // Cache global de permisos
 
 document.addEventListener('DOMContentLoaded', () => {
     if (!checkAuth()) {
@@ -29,7 +30,19 @@ document.addEventListener('DOMContentLoaded', () => {
     loadRoles();
     loadPermisos();
     loadModulos();
+    
+    // Carga inicial de permisos para el modal
+    preloadAllPermissions();
 });
+
+async function preloadAllPermissions() {
+    try {
+        const data = await permisoApi.getAll();
+        allPermissionsData = data.data || [];
+    } catch (error) {
+        console.error('Error preloading permissions:', error);
+    }
+}
 
 function initUI() {
     const addRoleBtn = document.getElementById('addRoleBtn');
@@ -41,7 +54,6 @@ function initUI() {
 function initTabs() {
     const tabButtons = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
-    const { permissions } = getUserData();
     
     const hasRolesPerms = hasPermission('roles_ver') || hasPermission('roles_crear') || hasPermission('roles_editar') || hasPermission('roles_eliminar');
     const hasPermisosPerms = hasPermission('permisos_ver');
@@ -65,13 +77,6 @@ function initTabs() {
             document.getElementById(`${btn.dataset.tab}-tab`)?.classList.add('active');
         });
     });
-
-    if (!hasRolesPerms) {
-        document.getElementById('roles-tab')?.style.setProperty('display', 'none');
-    }
-    if (!hasPermisosPerms) {
-        document.getElementById('permisos-tab')?.style.setProperty('display', 'none');
-    }
 
     const visibleTabs = Array.from(tabButtons).filter(btn => btn.style.display !== 'none');
     if (visibleTabs.length > 0) {
@@ -122,8 +127,8 @@ function renderRoles(roles) {
         
         if (canEditRoles) {
             actions += `
-                <button class="btn-action edit" onclick="openRoleModal(${rol.id_rol}, '${escapeHtml(rol.nombre)}', '${escapeHtml(rol.descripcion || '')}', ${rol.es_rol_sistema})" title="Editar rol">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <button class="btn btn-icon btn-ghost" onclick="openRoleModal(${rol.id_rol}, '${escapeHtml(rol.nombre)}', '${escapeHtml(rol.descripcion || '')}', ${rol.es_rol_sistema})" title="Editar rol">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                     </svg>
@@ -132,8 +137,8 @@ function renderRoles(roles) {
         
         if (canDeleteRoles && !rol.es_rol_sistema) {
             actions += `
-                <button class="btn-action delete" onclick="deleteRole(${rol.id_rol}, '${escapeHtml(rol.nombre)}')" title="Eliminar rol">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <button class="btn btn-icon btn-ghost" style="color: var(--error);" onclick="deleteRole(${rol.id_rol}, '${escapeHtml(rol.nombre)}')" title="Eliminar rol">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
                         <polyline points="3 6 5 6 21 6"/>
                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                     </svg>
@@ -145,8 +150,8 @@ function renderRoles(roles) {
                 <td>${rol.id_rol}</td>
                 <td><strong>${escapeHtml(rol.nombre)}</strong></td>
                 <td>${escapeHtml(rol.descripcion || '-')}</td>
-                <td><span class="system-badge ${rol.es_rol_sistema ? 'yes' : 'no'}">${rol.es_rol_sistema ? 'Sí' : 'No'}</span></td>
-                <td><span class="permissions-count">${rol.permisos_count || 0} permisos</span></td>
+                <td><span class="badge badge-${rol.es_rol_sistema ? 'primary' : 'secondary'}">${rol.es_rol_sistema ? 'Sí' : 'No'}</span></td>
+                <td><span class="badge badge-info">${rol.permisos_count || 0} permisos</span></td>
                 <td>
                     <div class="action-buttons">
                         ${actions}
@@ -254,43 +259,46 @@ function renderModulos(modulos) {
     }
 
     grid.innerHTML = modulos.map(modulo => `
-        <div class="module-card">
-            <div class="module-header">
-                <div class="module-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <div class="card">
+            <div class="flex items-center gap-4 mb-4">
+                <div class="stat-icon institutions" style="width: 40px; height: 40px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
                         <line x1="3" y1="9" x2="21" y2="9"/>
                         <line x1="9" y1="21" x2="9" y2="9"/>
                     </svg>
                 </div>
                 <div>
-                    <div class="module-name">${escapeHtml(modulo.nombre)}</div>
-                    <div class="module-code">${escapeHtml(modulo.codigo)}</div>
+                    <div class="font-semibold text-primary">${escapeHtml(modulo.nombre)}</div>
+                    <div class="text-xs text-muted">${escapeHtml(modulo.codigo)}</div>
                 </div>
             </div>
-            <p class="module-desc">${escapeHtml(modulo.descripcion || 'Sin descripción')}</p>
-            <div class="module-stats">
-                <span class="module-stat">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
-                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                        <polyline points="22 4 12 14.01 9 11.01"/>
-                    </svg>
-                    ${modulo.permisos_count || 0} permisos
-                </span>
+            <p class="text-sm text-secondary mb-4">${escapeHtml(modulo.descripcion || 'Sin descripción')}</p>
+            <div class="flex items-center gap-2 text-xs text-muted">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                <span>${modulo.permisos_count || 0} permisos</span>
             </div>
         </div>
     `).join('');
 }
 
-let allPermissionsData = [];
-
 window.openRoleModal = async function(roleId = null, nombre = '', descripcion = '', esSistema = false) {
     const modal = document.getElementById('roleModal');
     const form = document.getElementById('roleForm');
     const title = document.getElementById('roleModalTitle');
+    const permissionsContainer = document.getElementById('rolePermissions');
 
     editingRoleId = roleId;
     form.reset();
+    permissionsContainer.innerHTML = '<div class="text-sm text-muted p-4">Cargando permisos...</div>';
+
+    // Aseguramos que los permisos estén cargados antes de renderizar
+    if (allPermissionsData.length === 0) {
+        await preloadAllPermissions();
+    }
 
     if (roleId) {
         title.textContent = 'Editar Rol';
@@ -300,51 +308,31 @@ window.openRoleModal = async function(roleId = null, nombre = '', descripcion = 
         document.getElementById('roleSistema').checked = esSistema;
         document.getElementById('roleName').disabled = esSistema;
         
-        await loadPermissionsForRole(roleId);
+        try {
+            const roleData = await rolApi.getById(roleId);
+            const rolePermisosIds = (roleData.data?.permisos || []).map(p => p.id_permiso);
+            renderPermissionsGrid(rolePermisosIds);
+        } catch (error) {
+            handleApiError(error, 'Error al cargar permisos del rol');
+        }
     } else {
         title.textContent = 'Nuevo Rol';
         document.getElementById('roleId').value = '';
         document.getElementById('roleName').disabled = false;
-        loadAllPermissions();
+        renderPermissionsGrid([]);
     }
 
     openModal(modal);
 };
 
-function closeRoleModal() {
-    closeModal(document.getElementById('roleModal'));
-    editingRoleId = null;
-}
-
-async function loadAllPermissions() {
-    try {
-        const data = await permisoApi.getAll();
-        allPermissionsData = data.data || [];
-        renderPermissionsGrid([]);
-    } catch (error) {
-        console.error('Error loading permissions:', error);
-    }
-}
-
-async function loadPermissionsForRole(roleId) {
-    try {
-        const [permisosData, roleData] = await Promise.all([
-            permisoApi.getAll(),
-            rolApi.getById(roleId)
-        ]);
-        
-        allPermissionsData = permisosData.data || [];
-        const rolePermisos = roleData.data?.permisos || [];
-        renderPermissionsGrid(rolePermisos);
-    } catch (error) {
-        console.error('Error loading permissions for role:', error);
-    }
-}
-
-function renderPermissionsGrid(selectedPermisos) {
+function renderPermissionsGrid(selectedIds = []) {
     const container = document.getElementById('rolePermissions');
-    const selectedIds = selectedPermisos.map(p => p.id_permiso);
     
+    if (allPermissionsData.length === 0) {
+        container.innerHTML = '<div class="text-error p-4">No se cargaron los permisos correctamente</div>';
+        return;
+    }
+
     const modulosMap = {};
     allPermissionsData.forEach(p => {
         if (!modulosMap[p.id_modulo]) {
@@ -360,17 +348,22 @@ function renderPermissionsGrid(selectedPermisos) {
     Object.entries(modulosMap).forEach(([, modulo]) => {
         html += `<div class="permission-module-header">${escapeHtml(modulo.nombre)}</div>`;
         modulo.permisos.forEach(p => {
-            const checked = selectedIds.includes(p.id_permiso) ? 'checked' : '';
+            const isChecked = selectedIds.includes(p.id_permiso);
             html += `
-                <label class="permission-checkbox">
-                    <input type="checkbox" name="permisos" value="${p.id_permiso}" ${checked}>
-                    <span>${escapeHtml(p.nombre)}</span>
+                <label class="checkbox-group mb-2">
+                    <input type="checkbox" name="permisos" class="checkbox-input" value="${p.id_permiso}" ${isChecked ? 'checked' : ''}>
+                    <span class="text-sm">${escapeHtml(p.nombre)}</span>
                 </label>
             `;
         });
     });
 
     container.innerHTML = html;
+}
+
+function closeRoleModal() {
+    closeModal(document.getElementById('roleModal'));
+    editingRoleId = null;
 }
 
 async function handleRoleSubmit(e) {

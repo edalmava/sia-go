@@ -4,25 +4,32 @@ export function showToast(message, type = 'success') {
     const container = document.getElementById('toastContainer') || createToastContainer();
     
     const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
+    toast.className = `toast toast-${type}`;
     
-    const iconSvg = type === 'success' 
-        ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>'
-        : '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
+    // Iconos modernos (Lucide-like)
+    const icons = {
+        success: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+        error: '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
+        info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+        warning: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>'
+    };
     
     toast.innerHTML = `
-        <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            ${iconSvg}
+        <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            ${icons[type] || icons.info}
         </svg>
         <span class="toast-message">${escapeHtml(message)}</span>
     `;
     
     container.appendChild(toast);
     
+    // Auto-remove con animación
     setTimeout(() => {
-        toast.style.animation = 'slideOut 0.3s ease forwards';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(20px)';
+        toast.style.transition = 'all 0.3s ease';
         setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    }, 4000);
 }
 
 function createToastContainer() {
@@ -62,33 +69,47 @@ export function debounce(func, wait) {
     };
 }
 
-export function createBadge(text, type = 'default') {
+export function createBadge(text, type = 'primary') {
     return `<span class="badge badge-${type}">${escapeHtml(text)}</span>`;
 }
 
 export function createRoleBadge(rol) {
-    const colorClass = ROLE_COLORS[rol] || 'default';
-    return `<span class="role-badge ${colorClass}">${escapeHtml(rol)}</span>`;
+    const roleMap = {
+        'ADMIN': 'primary',
+        'DIRECTOR': 'info',
+        'DOCENTE': 'warning',
+        'ESTUDIANTE': 'success',
+        'ACUDIENTE': 'secondary'
+    };
+    const type = roleMap[rol] || 'primary';
+    return `<span class="badge badge-${type}">${escapeHtml(rol)}</span>`;
 }
 
 export function createStatusBadge(activo) {
+    const type = activo ? 'success' : 'error';
     const text = activo ? 'Activo' : 'Inactivo';
-    const className = activo ? 'active' : 'inactive';
-    return `<span class="status-badge ${className}">${text}</span>`;
+    return `<span class="badge badge-${type}">${text}</span>`;
 }
 
 export function createSystemBadge(esSistema) {
     const text = esSistema ? 'Sí' : 'No';
-    const className = esSistema ? 'yes' : 'no';
-    return `<span class="system-badge ${className}">${text}</span>`;
+    const type = esSistema ? 'primary' : 'secondary';
+    return `<span class="badge badge-${type}">${text}</span>`;
 }
 
 export function createLoadingCell(cols = 1) {
-    return `<tr><td colspan="${cols}" class="loading-cell">Cargando...</td></tr>`;
+    return `<tr><td colspan="${cols}" class="loading-cell">
+        <div class="flex items-center justify-center gap-2">
+            <svg class="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+            <span>Cargando datos...</span>
+        </div>
+    </td></tr>`;
 }
 
 export function createEmptyCell(message, cols = 1) {
-    return `<tr><td colspan="${cols}" class="empty-cell">${escapeHtml(message)}</td></tr>`;
+    return `<tr><td colspan="${cols}" class="empty-cell text-center text-muted">${escapeHtml(message)}</td></tr>`;
 }
 
 export function createPagination(total, offset, limit) {
@@ -103,17 +124,21 @@ export function createPagination(total, offset, limit) {
 
 export function showLoading(button) {
     if (!button) return;
-    button.dataset.originalText = button.innerHTML;
     button.disabled = true;
-    button.classList.add('loading');
+    button.dataset.originalContent = button.innerHTML;
+    button.innerHTML = `
+        <svg class="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+        </svg>
+        <span>Cargando...</span>
+    `;
 }
 
 export function hideLoading(button) {
     if (!button) return;
     button.disabled = false;
-    button.classList.remove('loading');
-    if (button.dataset.originalText) {
-        button.innerHTML = button.dataset.originalText;
+    if (button.dataset.originalContent) {
+        button.innerHTML = button.dataset.originalContent;
     }
 }
 

@@ -20,8 +20,8 @@
             <div class="sidebar-header">
                 <div class="logo">
                     <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect width="48" height="48" rx="12" fill="#1a1a2e"/>
-                        <path d="M14 32V16h6l8 10 8-10h6v16h-6V22l-8 10-8-10v10h-6z" fill="#e8d5b7"/>
+                        <rect width="48" height="48" rx="12" fill="currentColor"/>
+                        <path d="M14 32V16h6l8 10 8-10h6v16h-6V22l-8 10-8-10v10h-6z" fill="currentColor"/>
                     </svg>
                 </div>
                 <span class="logo-text">SIA</span>
@@ -146,8 +146,8 @@
                 <div class="settings-section">
                     <div class="section-header">
                         <h2>Gestión de Roles</h2>
-                        <button class="btn-primary" id="addRoleBtn">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <button class="btn btn-primary" id="addRoleBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="12" y1="5" x2="12" y2="19"/>
                                 <line x1="5" y1="12" x2="19" y2="12"/>
                             </svg>
@@ -156,7 +156,7 @@
                     </div>
                     <div class="table-card">
                         <div class="table-container">
-                            <table class="settings-table">
+                            <table class="table settings-table">
                                 <thead>
                                     <tr>
                                         <th>ID</th>
@@ -185,20 +185,20 @@
                         <h2>Gestión de Permisos</h2>
                     </div>
                     <div class="filters">
-                        <div class="search-box">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <div class="search-bar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="11" cy="11" r="8"/>
                                 <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                             </svg>
-                            <input type="text" id="permisoSearch" placeholder="Buscar permisos...">
+                            <input type="text" id="permisoSearch" class="form-control" placeholder="Buscar permisos...">
                         </div>
-                        <select id="moduloFilter" class="filter-select">
+                        <select id="moduloFilter" class="form-control" style="max-width: 200px;">
                             <option value="">Todos los módulos</option>
                         </select>
                     </div>
                     <div class="table-card">
                         <div class="table-container">
-                            <table class="settings-table">
+                            <table class="table settings-table">
                                 <thead>
                                     <tr>
                                         <th>ID</th>
@@ -249,22 +249,21 @@
                 <div class="modal-body">
                     <input type="hidden" id="roleId">
                     <div class="form-group">
-                        <label for="roleName">Nombre del Rol</label>
-                        <input type="text" id="roleName" name="nombre" required placeholder="Ej: DOCENTE">
+                        <label for="roleName" class="form-label">Nombre del Rol</label>
+                        <input type="text" id="roleName" name="nombre" class="form-control" required placeholder="Ej: DOCENTE">
                     </div>
                     <div class="form-group">
-                        <label for="roleDesc">Descripción</label>
-                        <input type="text" id="roleDesc" name="descripcion" placeholder="Descripción del rol">
+                        <label for="roleDesc" class="form-label">Descripción</label>
+                        <input type="text" id="roleDesc" name="descripcion" class="form-control" placeholder="Descripción del rol">
                     </div>
                     <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="roleSistema" name="es_rol_sistema">
-                            <span class="checkbox-custom"></span>
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="roleSistema" name="es_rol_sistema" class="checkbox-input">
                             <span>Rol de sistema (no eliminable)</span>
                         </label>
                     </div>
                     <div class="form-group">
-                        <label>Permisos</label>
+                        <label class="form-label">Permisos</label>
                         <div class="permissions-grid" id="rolePermissions"></div>
                     </div>
                 </div>

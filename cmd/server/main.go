@@ -11,6 +11,7 @@ import (
 	"github.com/edalmava/sia/internal/handlers"
 	"github.com/edalmava/sia/internal/middleware"
 	"github.com/edalmava/sia/internal/repository"
+	"github.com/edalmava/sia/internal/utils"
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
 )
@@ -20,9 +21,33 @@ func main() {
 
 	e := echo.New()
 
+	// Registro de validador
+	e.Validator = utils.NewValidator()
+
+	// Middlewares de seguridad
+	e.Use(middleware.SecurityHeaders())
 	e.Use(echoMiddleware.Logger())
 	e.Use(echoMiddleware.Recover())
-	e.Use(echoMiddleware.CORS())
+	
+	// Configuración de CORS más restrictiva
+	e.Use(echoMiddleware.CORSWithConfig(echoMiddleware.CORSConfig{
+		AllowOrigins: []string{"*"}, // TODO: Cambiar por dominios específicos en producción
+		AllowMethods: []string{http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete},
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+	}))
+
+	// Aplicar Rate Limiter con excepciones para archivos estáticos
+	e.Use(echoMiddleware.RateLimiterWithConfig(echoMiddleware.RateLimiterConfig{
+		Skipper: func(c echo.Context) bool {
+			path := c.Path()
+			// No limitar archivos estáticos, salud o redirecciones iniciales
+			return path == "/health" || path == "/" || len(path) > 5 && path[:5] == "/web/"
+		},
+		Store: echoMiddleware.NewRateLimiterMemoryStore(20), // Aumentado a 20 peticiones por segundo
+		IdentifierExtractor: func(ctx echo.Context) (string, error) {
+			return ctx.RealIP(), nil
+		},
+	}))
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
@@ -190,12 +215,12 @@ func main() {
 	api.GET("/docentes/:id/horarios", horarioHandler.GetByDocente)
 	api.GET("/grupos/:id/horarios", horarioHandler.GetByGrupo)
 
-	adminAPI.GET("/usuarios", usuarioHandler.GetAll)
-	adminAPI.GET("/usuarios/:id", usuarioHandler.GetByID)
-	adminAPI.POST("/usuarios", usuarioHandler.Create)
-	adminAPI.PUT("/usuarios/:id", usuarioHandler.Update)
-	adminAPI.DELETE("/usuarios/:id", usuarioHandler.Delete)
-	adminAPI.POST("/usuarios/:id/change-password", usuarioHandler.ChangePassword)
+	adminAPI.GET("/usuarios", usuarioHandler.GetAll, middleware.RequirePermission("usuarios_ver"))
+	adminAPI.GET("/usuarios/:id", usuarioHandler.GetByID, middleware.RequirePermission("usuarios_ver"))
+	adminAPI.POST("/usuarios", usuarioHandler.Create, middleware.RequirePermission("usuarios_crear"))
+	adminAPI.PUT("/usuarios/:id", usuarioHandler.Update, middleware.RequirePermission("usuarios_editar"))
+	adminAPI.DELETE("/usuarios/:id", usuarioHandler.Delete, middleware.RequirePermission("usuarios_eliminar"))
+	adminAPI.POST("/usuarios/:id/change-password", usuarioHandler.ChangePassword, middleware.RequirePermission("usuarios_cambiar_clave"))
 
 	api.GET("/acudientes", acudienteHandler.GetAll)
 	api.GET("/acudientes/:id", acudienteHandler.GetByID)
@@ -203,14 +228,14 @@ func main() {
 	api.PUT("/acudientes/:id", acudienteHandler.Update)
 	api.DELETE("/acudientes/:id", acudienteHandler.Delete)
 
-	adminAPI.GET("/roles", configHandler.GetRoles)
-	adminAPI.GET("/roles/:id", configHandler.GetRoleByID)
-	adminAPI.POST("/roles", configHandler.CreateRole)
-	adminAPI.PUT("/roles/:id", configHandler.UpdateRole)
-	adminAPI.DELETE("/roles/:id", configHandler.DeleteRole)
+	adminAPI.GET("/roles", configHandler.GetRoles, middleware.RequirePermission("roles_ver"))
+	adminAPI.GET("/roles/:id", configHandler.GetRoleByID, middleware.RequirePermission("roles_ver"))
+	adminAPI.POST("/roles", configHandler.CreateRole, middleware.RequirePermission("roles_crear"))
+	adminAPI.PUT("/roles/:id", configHandler.UpdateRole, middleware.RequirePermission("roles_editar"))
+	adminAPI.DELETE("/roles/:id", configHandler.DeleteRole, middleware.RequirePermission("roles_eliminar"))
 
-	adminAPI.GET("/permisos", configHandler.GetPermisos)
-	adminAPI.GET("/modulos", configHandler.GetModulos)
+	adminAPI.GET("/permisos", configHandler.GetPermisos, middleware.RequirePermission("permisos_ver"))
+	adminAPI.GET("/modulos", configHandler.GetModulos, middleware.RequirePermission("permisos_ver"))
 
 	addr := fmt.Sprintf(":%s", cfg.Server.Port)
 	log.Printf("Servidor iniciando en %s", addr)

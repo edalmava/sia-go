@@ -79,16 +79,9 @@ func (h *ConfigHandler) CreateRole(c echo.Context) error {
 		return dbUnavailable(c)
 	}
 
-	if !checkPermission(c, "usuarios_crear") {
-		return c.JSON(http.StatusForbidden, models.ErrorResponse{
-			Error:   "forbidden",
-			Message: "No tienes permisos para crear roles",
-		})
-	}
-
 	var req struct {
-		Nombre       string `json:"nombre"`
-		Descripcion  string `json:"descripcion"`
+		Nombre       string `json:"nombre" validate:"required,max=50"`
+		Descripcion  string `json:"descripcion" validate:"max=255"`
 		EsRolSistema bool   `json:"es_rol_sistema"`
 		Permisos     []int  `json:"permisos"`
 	}
@@ -100,10 +93,10 @@ func (h *ConfigHandler) CreateRole(c echo.Context) error {
 		})
 	}
 
-	if req.Nombre == "" {
+	if err := c.Validate(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error:   "validation_error",
-			Message: "El nombre del rol es requerido",
+			Message: err.Error(),
 		})
 	}
 
@@ -138,13 +131,6 @@ func (h *ConfigHandler) UpdateRole(c echo.Context) error {
 		return dbUnavailable(c)
 	}
 
-	if !checkPermission(c, "usuarios_editar") {
-		return c.JSON(http.StatusForbidden, models.ErrorResponse{
-			Error:   "forbidden",
-			Message: "No tienes permisos para actualizar roles",
-		})
-	}
-
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
@@ -175,8 +161,8 @@ func (h *ConfigHandler) UpdateRole(c echo.Context) error {
 	}
 
 	var req struct {
-		Nombre       string `json:"nombre"`
-		Descripcion  string `json:"descripcion"`
+		Nombre       string `json:"nombre" validate:"required,max=50"`
+		Descripcion  string `json:"descripcion" validate:"max=255"`
 		EsRolSistema bool   `json:"es_rol_sistema"`
 		Permisos     []int  `json:"permisos"`
 	}
@@ -185,6 +171,13 @@ func (h *ConfigHandler) UpdateRole(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error:   "validation_error",
 			Message: "Error en los datos de entrada",
+		})
+	}
+
+	if err := c.Validate(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: err.Error(),
 		})
 	}
 
@@ -217,13 +210,6 @@ func (h *ConfigHandler) UpdateRole(c echo.Context) error {
 func (h *ConfigHandler) DeleteRole(c echo.Context) error {
 	if h.rolRepo == nil {
 		return dbUnavailable(c)
-	}
-
-	if !checkPermission(c, "usuarios_eliminar") {
-		return c.JSON(http.StatusForbidden, models.ErrorResponse{
-			Error:   "forbidden",
-			Message: "No tienes permisos para eliminar roles",
-		})
 	}
 
 	id, err := strconv.Atoi(c.Param("id"))

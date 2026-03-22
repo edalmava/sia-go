@@ -9,16 +9,36 @@ async function getHeaders() {
 }
 
 async function handleResponse(response) {
-    const data = await response.json();
+    const text = await response.text();
     
     if (!response.ok) {
-        const error = new Error(data.message || 'Error en la solicitud');
+        if (response.status === 401) {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userData');
+            window.location.href = '/web/login.html';
+            return;
+        }
+
+        let message = 'Error en la solicitud';
+        let data = null;
+        
+        try {
+            if (text) {
+                data = JSON.parse(text);
+                message = data.message || message;
+            }
+        } catch (e) {
+            console.error('Error parsing error response:', e);
+        }
+
+        const error = new Error(message);
         error.status = response.status;
         error.data = data;
         throw error;
     }
     
-    return data;
+    if (!text) return null;
+    return JSON.parse(text);
 }
 
 export const api = {
@@ -82,8 +102,7 @@ export const usuarioApi = {
     create: (data) => api.post('/usuarios', data),
     update: (id, data) => api.put(`/usuarios/${id}`, data),
     delete: (id) => api.delete(`/usuarios/${id}`),
-    changePassword: (id, newPassword) => api.post(`/usuarios/${id}/cambiar-clave`, { clave: newPassword }),
-    toggleActive: (id) => api.post(`/usuarios/${id}/toggle-activo`, {})
+    changePassword: (id, newPassword) => api.post(`/usuarios/${id}/change-password`, { password: newPassword })
 };
 
 export const rolApi = {
