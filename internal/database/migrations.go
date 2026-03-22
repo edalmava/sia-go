@@ -303,6 +303,30 @@ func (db *DB) Migrate() error {
 			id_entidad INTEGER NOT NULL
 		)`,
 
+		`CREATE TABLE IF NOT EXISTS refresh_tokens (
+			id SERIAL PRIMARY KEY,
+			token_hash VARCHAR(255) NOT NULL UNIQUE,
+			jti VARCHAR(36) NOT NULL UNIQUE,
+			id_usuario INTEGER NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+			fecha_expiracion TIMESTAMP NOT NULL,
+			fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			dispositivo VARCHAR(255),
+			activo BOOLEAN DEFAULT TRUE
+		)`,
+
+		`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_usuario ON refresh_tokens(id_usuario)`,
+		`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expiracion ON refresh_tokens(fecha_expiracion)`,
+		`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_hash ON refresh_tokens(token_hash)`,
+		`CREATE INDEX IF NOT EXISTS idx_refresh_tokens_jti ON refresh_tokens(jti)`,
+
+		`CREATE TABLE IF NOT EXISTS revoked_access_tokens (
+			jti VARCHAR(36) PRIMARY KEY,
+			fecha_revocado TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			fecha_expiracion TIMESTAMP NOT NULL
+		)`,
+
+		`CREATE INDEX IF NOT EXISTS idx_revoked_expira ON revoked_access_tokens(fecha_expiracion)`,
+
 		`INSERT INTO dias_semana (nombre, codigo) VALUES 
 			('Lunes', 1), ('Martes', 2), ('Miércoles', 3), 
 			('Jueves', 4), ('Viernes', 5), ('Sábado', 6), ('Domingo', 7)

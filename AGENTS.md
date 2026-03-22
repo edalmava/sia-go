@@ -23,7 +23,8 @@ go mod tidy                          # Tidy dependencies
 ```bash
 SERVER_PORT=8080
 JWT_SECRET=<REQUIRED - panics if missing>
-JWT_EXPIRY=24h
+JWT_EXPIRATION_HOURS=24      # Access token expiration
+JWT_REFRESH_HOURS=168         # Refresh token expiration (7 days)
 DB_HOST=localhost; DB_PORT=5433
 DB_USER=postgres; DB_PASSWORD=postgres; DB_NAME=sia
 ```
@@ -259,6 +260,47 @@ export function logout() { }                // Clear token and redirect
 - Use `middleware.RequirePermission("codigo_permiso")` for route protection
 - Permission codes: `recurso_accion` (e.g., `usuarios_crear`, `usuarios_editar`)
 - `GET /usuarios` returns `UsuarioResponse` (no password), not `Usuario`
+
+### Token Rotation (Access + Refresh Tokens)
+The system implements refresh token rotation for enhanced security:
+
+**Token Configuration (env vars):**
+```bash
+JWT_EXPIRATION_HOURS=24    # Access token expiration (default: 24h)
+JWT_REFRESH_HOURS=168      # Refresh token expiration (default: 168h = 7 days)
+```
+
+**Auth Endpoints:**
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/auth/login` | POST | Login, returns access + refresh tokens |
+| `/auth/refresh` | POST | Exchange refresh token for new tokens |
+| `/auth/logout` | POST | Revoke current refresh token |
+| `/auth/logout-all` | POST | Revoke ALL refresh tokens for user (requires auth) |
+
+**Login Response:**
+```json
+{
+  "access_token": "eyJhbGc...",
+  "refresh_token": "a1b2c3d4...",
+  "token_type": "Bearer",
+  "expires_in": 86400,
+  "role": "ADMIN",
+  "id_rol": 1
+}
+```
+
+**Refresh Request:**
+```json
+POST /auth/refresh
+{ "refresh_token": "a1b2c3d4..." }
+```
+
+**Security Features:**
+- Refresh tokens are hashed (SHA-256) before storage
+- Old refresh tokens are revoked after use (rotation)
+- Expired tokens are automatically invalidated
+- All user sessions can be terminated with logout-all
 
 ---
 

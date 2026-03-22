@@ -19,9 +19,9 @@ type ServerConfig struct {
 }
 
 type JWTConfig struct {
-	Secret          string
-	ExpirationHours int
-	RefreshHours    int
+	Secret           string
+	AccessTTLMinutes int
+	RefreshHours     int
 }
 
 type DatabaseConfig struct {
@@ -46,9 +46,9 @@ func Load() *Config {
 			WriteTimeout: 30 * time.Second,
 		},
 		JWT: JWTConfig{
-			Secret:          jwtSecret,
-			ExpirationHours: getEnvInt("JWT_EXPIRATION_HOURS", 24),
-			RefreshHours:    getEnvInt("JWT_REFRESH_HOURS", 168),
+			Secret:           jwtSecret,
+			AccessTTLMinutes: getEnvInt("JWT_ACCESS_TTL_MINUTES", 15),
+			RefreshHours:     getEnvInt("JWT_REFRESH_HOURS", 168),
 		},
 		Database: DatabaseConfig{
 			Host:     getEnv("DB_HOST", "localhost"),

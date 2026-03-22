@@ -22,13 +22,8 @@ func (h *JornadaHandler) GetAll(c echo.Context) error {
 	if h.repo == nil {
 		return dbUnavailable(c)
 	}
-	offset, _ := strconv.Atoi(c.QueryParam("offset"))
-	limit, _ := strconv.Atoi(c.QueryParam("limit"))
+	offset, limit := parsePagination(c)
 	nombre := c.QueryParam("nombre")
-
-	if limit == 0 {
-		limit = 20
-	}
 
 	jornadas, total, err := h.repo.GetAll(offset, limit, nombre)
 	if err != nil {

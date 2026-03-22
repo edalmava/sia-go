@@ -12,6 +12,39 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+const (
+	DefaultLimit = 20
+	MaxLimit     = 100
+)
+
+func parseIDParam(c echo.Context, paramName string) (int, error) {
+	id, err := strconv.Atoi(c.Param(paramName))
+	if err != nil {
+		return 0, c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "ID inválido",
+		})
+	}
+	return id, nil
+}
+
+func parsePagination(c echo.Context) (int, int) {
+	offset, _ := strconv.Atoi(c.QueryParam("offset"))
+	limit, _ := strconv.Atoi(c.QueryParam("limit"))
+
+	if offset < 0 {
+		offset = 0
+	}
+	if limit <= 0 {
+		limit = DefaultLimit
+	}
+	if limit > MaxLimit {
+		limit = MaxLimit
+	}
+
+	return offset, limit
+}
+
 type MatriculaHandler struct{}
 
 func NewMatriculaHandler() *MatriculaHandler {
@@ -19,11 +52,7 @@ func NewMatriculaHandler() *MatriculaHandler {
 }
 
 func (h *MatriculaHandler) GetAll(c echo.Context) error {
-	offset, _ := strconv.Atoi(c.QueryParam("offset"))
-	limit, _ := strconv.Atoi(c.QueryParam("limit"))
-	if limit == 0 {
-		limit = 20
-	}
+	offset, limit := parsePagination(c)
 	return c.JSON(http.StatusOK, models.PaginatedResponse{
 		Data:       []models.Matricula{},
 		Pagination: models.Pagination{Total: 0, Offset: offset, Limit: limit},
@@ -31,26 +60,47 @@ func (h *MatriculaHandler) GetAll(c echo.Context) error {
 }
 
 func (h *MatriculaHandler) GetByID(c echo.Context) error {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
 	return c.JSON(http.StatusOK, models.Matricula{IDMatricula: id, IDEstudiante: 1, IDGrupo: 1, IDAnioLectivo: 1, Estado: "ACTIVO"})
 }
 
 func (h *MatriculaHandler) Create(c echo.Context) error {
 	var m models.Matricula
-	c.Bind(&m)
+	if err := c.Bind(&m); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Datos inválidos",
+		})
+	}
 	m.IDMatricula = 1
 	return c.JSON(http.StatusCreated, m)
 }
 
 func (h *MatriculaHandler) Update(c echo.Context) error {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
 	var m models.Matricula
-	c.Bind(&m)
+	if err := c.Bind(&m); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Datos inválidos",
+		})
+	}
 	m.IDMatricula = id
 	return c.JSON(http.StatusOK, m)
 }
 
 func (h *MatriculaHandler) Delete(c echo.Context) error {
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
+	_ = id
 	return c.NoContent(http.StatusNoContent)
 }
 
@@ -61,11 +111,7 @@ func NewPeriodoHandler() *PeriodoHandler {
 }
 
 func (h *PeriodoHandler) GetAll(c echo.Context) error {
-	offset, _ := strconv.Atoi(c.QueryParam("offset"))
-	limit, _ := strconv.Atoi(c.QueryParam("limit"))
-	if limit == 0 {
-		limit = 20
-	}
+	offset, limit := parsePagination(c)
 	return c.JSON(http.StatusOK, models.PaginatedResponse{
 		Data:       []models.Periodo{},
 		Pagination: models.Pagination{Total: 0, Offset: offset, Limit: limit},
@@ -73,26 +119,47 @@ func (h *PeriodoHandler) GetAll(c echo.Context) error {
 }
 
 func (h *PeriodoHandler) GetByID(c echo.Context) error {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
 	return c.JSON(http.StatusOK, models.Periodo{IDPeriodo: id, Nombre: "Primer Periodo"})
 }
 
 func (h *PeriodoHandler) Create(c echo.Context) error {
 	var p models.Periodo
-	c.Bind(&p)
+	if err := c.Bind(&p); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Datos inválidos",
+		})
+	}
 	p.IDPeriodo = 1
 	return c.JSON(http.StatusCreated, p)
 }
 
 func (h *PeriodoHandler) Update(c echo.Context) error {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
 	var p models.Periodo
-	c.Bind(&p)
+	if err := c.Bind(&p); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Datos inválidos",
+		})
+	}
 	p.IDPeriodo = id
 	return c.JSON(http.StatusOK, p)
 }
 
 func (h *PeriodoHandler) Delete(c echo.Context) error {
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
+	_ = id
 	return c.NoContent(http.StatusNoContent)
 }
 
@@ -103,11 +170,7 @@ func NewAnioLectivoHandler() *AnioLectivoHandler {
 }
 
 func (h *AnioLectivoHandler) GetAll(c echo.Context) error {
-	offset, _ := strconv.Atoi(c.QueryParam("offset"))
-	limit, _ := strconv.Atoi(c.QueryParam("limit"))
-	if limit == 0 {
-		limit = 20
-	}
+	offset, limit := parsePagination(c)
 	return c.JSON(http.StatusOK, models.PaginatedResponse{
 		Data:       []models.AnioLectivo{},
 		Pagination: models.Pagination{Total: 0, Offset: offset, Limit: limit},
@@ -115,26 +178,47 @@ func (h *AnioLectivoHandler) GetAll(c echo.Context) error {
 }
 
 func (h *AnioLectivoHandler) GetByID(c echo.Context) error {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
 	return c.JSON(http.StatusOK, models.AnioLectivo{IDAnioLectivo: id, Anio: 2025, Estado: "ACTIVO"})
 }
 
 func (h *AnioLectivoHandler) Create(c echo.Context) error {
 	var a models.AnioLectivo
-	c.Bind(&a)
+	if err := c.Bind(&a); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Datos inválidos",
+		})
+	}
 	a.IDAnioLectivo = 1
 	return c.JSON(http.StatusCreated, a)
 }
 
 func (h *AnioLectivoHandler) Update(c echo.Context) error {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
 	var a models.AnioLectivo
-	c.Bind(&a)
+	if err := c.Bind(&a); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Datos inválidos",
+		})
+	}
 	a.IDAnioLectivo = id
 	return c.JSON(http.StatusOK, a)
 }
 
 func (h *AnioLectivoHandler) Delete(c echo.Context) error {
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
+	_ = id
 	return c.NoContent(http.StatusNoContent)
 }
 
@@ -145,11 +229,7 @@ func NewEvaluacionHandler() *EvaluacionHandler {
 }
 
 func (h *EvaluacionHandler) GetAll(c echo.Context) error {
-	offset, _ := strconv.Atoi(c.QueryParam("offset"))
-	limit, _ := strconv.Atoi(c.QueryParam("limit"))
-	if limit == 0 {
-		limit = 20
-	}
+	offset, limit := parsePagination(c)
 	return c.JSON(http.StatusOK, models.PaginatedResponse{
 		Data:       []models.Evaluacion{},
 		Pagination: models.Pagination{Total: 0, Offset: offset, Limit: limit},
@@ -157,26 +237,47 @@ func (h *EvaluacionHandler) GetAll(c echo.Context) error {
 }
 
 func (h *EvaluacionHandler) GetByID(c echo.Context) error {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
 	return c.JSON(http.StatusOK, models.Evaluacion{IDEvaluacion: id, Nombre: "Evaluación parcial"})
 }
 
 func (h *EvaluacionHandler) Create(c echo.Context) error {
 	var e models.Evaluacion
-	c.Bind(&e)
+	if err := c.Bind(&e); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Datos inválidos",
+		})
+	}
 	e.IDEvaluacion = 1
 	return c.JSON(http.StatusCreated, e)
 }
 
 func (h *EvaluacionHandler) Update(c echo.Context) error {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
 	var e models.Evaluacion
-	c.Bind(&e)
+	if err := c.Bind(&e); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Datos inválidos",
+		})
+	}
 	e.IDEvaluacion = id
 	return c.JSON(http.StatusOK, e)
 }
 
 func (h *EvaluacionHandler) Delete(c echo.Context) error {
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
+	_ = id
 	return c.NoContent(http.StatusNoContent)
 }
 
@@ -187,11 +288,7 @@ func NewCalificacionHandler() *CalificacionHandler {
 }
 
 func (h *CalificacionHandler) GetAll(c echo.Context) error {
-	offset, _ := strconv.Atoi(c.QueryParam("offset"))
-	limit, _ := strconv.Atoi(c.QueryParam("limit"))
-	if limit == 0 {
-		limit = 20
-	}
+	offset, limit := parsePagination(c)
 	return c.JSON(http.StatusOK, models.PaginatedResponse{
 		Data:       []models.Calificacion{},
 		Pagination: models.Pagination{Total: 0, Offset: offset, Limit: limit},
@@ -199,26 +296,47 @@ func (h *CalificacionHandler) GetAll(c echo.Context) error {
 }
 
 func (h *CalificacionHandler) GetByID(c echo.Context) error {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
 	return c.JSON(http.StatusOK, models.Calificacion{IDCalificacion: id, Nota: 4.5})
 }
 
 func (h *CalificacionHandler) Create(c echo.Context) error {
 	var cals models.Calificacion
-	c.Bind(&cals)
+	if err := c.Bind(&cals); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Datos inválidos",
+		})
+	}
 	cals.IDCalificacion = 1
 	return c.JSON(http.StatusCreated, cals)
 }
 
 func (h *CalificacionHandler) Update(c echo.Context) error {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
 	var cals models.Calificacion
-	c.Bind(&cals)
+	if err := c.Bind(&cals); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Datos inválidos",
+		})
+	}
 	cals.IDCalificacion = id
 	return c.JSON(http.StatusOK, cals)
 }
 
 func (h *CalificacionHandler) Delete(c echo.Context) error {
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
+	_ = id
 	return c.NoContent(http.StatusNoContent)
 }
 
@@ -229,11 +347,7 @@ func NewCargaAcademicaHandler() *CargaAcademicaHandler {
 }
 
 func (h *CargaAcademicaHandler) GetAll(c echo.Context) error {
-	offset, _ := strconv.Atoi(c.QueryParam("offset"))
-	limit, _ := strconv.Atoi(c.QueryParam("limit"))
-	if limit == 0 {
-		limit = 20
-	}
+	offset, limit := parsePagination(c)
 	return c.JSON(http.StatusOK, models.PaginatedResponse{
 		Data:       []models.CargaAcademica{},
 		Pagination: models.Pagination{Total: 0, Offset: offset, Limit: limit},
@@ -241,26 +355,47 @@ func (h *CargaAcademicaHandler) GetAll(c echo.Context) error {
 }
 
 func (h *CargaAcademicaHandler) GetByID(c echo.Context) error {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
 	return c.JSON(http.StatusOK, models.CargaAcademica{IDCarga: id})
 }
 
 func (h *CargaAcademicaHandler) Create(c echo.Context) error {
 	var ca models.CargaAcademica
-	c.Bind(&ca)
+	if err := c.Bind(&ca); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Datos inválidos",
+		})
+	}
 	ca.IDCarga = 1
 	return c.JSON(http.StatusCreated, ca)
 }
 
 func (h *CargaAcademicaHandler) Update(c echo.Context) error {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
 	var ca models.CargaAcademica
-	c.Bind(&ca)
+	if err := c.Bind(&ca); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Datos inválidos",
+		})
+	}
 	ca.IDCarga = id
 	return c.JSON(http.StatusOK, ca)
 }
 
 func (h *CargaAcademicaHandler) Delete(c echo.Context) error {
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
+	_ = id
 	return c.NoContent(http.StatusNoContent)
 }
 
@@ -271,13 +406,19 @@ func NewHorarioHandler() *HorarioHandler {
 }
 
 func (h *HorarioHandler) GetByDocente(c echo.Context) error {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
 	_ = id
 	return c.JSON(http.StatusOK, []models.Horario{})
 }
 
 func (h *HorarioHandler) GetByGrupo(c echo.Context) error {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
 	_ = id
 	return c.JSON(http.StatusOK, []models.Horario{})
 }

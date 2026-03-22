@@ -370,8 +370,38 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	Token string `json:"token"`
-	Type  string `json:"type"`
-	Role  string `json:"role"`
-	IDRol int    `json:"id_rol"`
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int    `json:"expires_in"`
+	Role         string `json:"role"`
+	IDRol        int    `json:"id_rol"`
+}
+
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token" validate:"required"`
+}
+
+type RefreshTokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int    `json:"expires_in"`
+}
+
+type RefreshTokenDB struct {
+	ID              int       `db:"id"`
+	TokenHash       string    `db:"token_hash"`
+	JTI             string    `db:"jti"`
+	IDUsuario       int       `db:"id_usuario"`
+	FechaExpiracion time.Time `db:"fecha_expiracion"`
+	FechaCreacion   time.Time `db:"fecha_creacion"`
+	Dispositivo     *string   `db:"dispositivo"`
+	Activo          bool      `db:"activo"`
+}
+
+type RevokedToken struct {
+	JTI             string    `db:"jti"`
+	FechaRevocado   time.Time `db:"fecha_revocado"`
+	FechaExpiracion time.Time `db:"fecha_expiracion"`
 }

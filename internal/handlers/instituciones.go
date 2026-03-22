@@ -26,13 +26,8 @@ func (h *InstitucionHandler) GetAll(c echo.Context) error {
 		})
 	}
 
-	offset, _ := strconv.Atoi(c.QueryParam("offset"))
-	limit, _ := strconv.Atoi(c.QueryParam("limit"))
+	offset, limit := parsePagination(c)
 	nombre := c.QueryParam("nombre")
-
-	if limit == 0 {
-		limit = 20
-	}
 
 	instituciones, total, err := h.repo.GetAll(offset, limit, nombre)
 	if err != nil {

@@ -1,21 +1,69 @@
-import { API_URL } from './config.js';
+import { API_URL, AUTH_API } from './config.js';
+
+const STORAGE_KEYS = {
+    TOKEN: 'authToken',
+    REFRESH_TOKEN: 'refreshToken'
+};
 
 async function getHeaders() {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
     return {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
     };
 }
 
-async function handleResponse(response) {
+async function refreshAccessToken() {
+    const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+    if (!refreshToken) return false;
+
+    try {
+        const response = await fetch(`${AUTH_API}/refresh`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_token: refreshToken })
+        });
+
+        if (!response.ok) {
+            return false;
+        }
+
+        const data = await response.json();
+        
+        if (data.access_token) {
+            localStorage.setItem(STORAGE_KEYS.TOKEN, data.access_token);
+            if (data.refresh_token) {
+                localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, data.refresh_token);
+            }
+            return true;
+        }
+    } catch (e) {
+        console.error('Error refreshing token:', e);
+    }
+    return false;
+}
+
+function clearAuthAndRedirect() {
+    localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+    localStorage.removeItem('userData');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userPermissions');
+    localStorage.removeItem('username');
+    
+    window.location.href = '/web/login.html';
+}
+
+async function handleResponse(response, retry = true) {
     const text = await response.text();
     
     if (!response.ok) {
-        if (response.status === 401) {
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('userData');
-            window.location.href = '/web/login.html';
+        if (response.status === 401 && retry) {
+            const refreshed = await refreshAccessToken();
+            if (refreshed) {
+                return handleResponse(response, false);
+            }
+            clearAuthAndRedirect();
             return;
         }
 

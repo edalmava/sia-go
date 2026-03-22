@@ -22,15 +22,10 @@ func (h *GrupoHandler) GetAll(c echo.Context) error {
 	if h.repo == nil {
 		return dbUnavailable(c)
 	}
-	offset, _ := strconv.Atoi(c.QueryParam("offset"))
-	limit, _ := strconv.Atoi(c.QueryParam("limit"))
+	offset, limit := parsePagination(c)
 	idGrado, _ := strconv.Atoi(c.QueryParam("id_grado"))
 	idSede, _ := strconv.Atoi(c.QueryParam("id_sede"))
 	idJornada, _ := strconv.Atoi(c.QueryParam("id_jornada"))
-
-	if limit == 0 {
-		limit = 20
-	}
 
 	grupos, total, err := h.repo.GetAll(offset, limit, idGrado, idSede, idJornada)
 	if err != nil {

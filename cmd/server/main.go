@@ -28,7 +28,7 @@ func main() {
 	e.Use(middleware.SecurityHeaders())
 	e.Use(echoMiddleware.Logger())
 	e.Use(echoMiddleware.Recover())
-	
+
 	// Configuración de CORS más restrictiva
 	e.Use(echoMiddleware.CORSWithConfig(echoMiddleware.CORSConfig{
 		AllowOrigins: []string{"*"}, // TODO: Cambiar por dominios específicos en producción
@@ -112,18 +112,19 @@ func main() {
 	horarioHandler := handlers.NewHorarioHandler()
 	usuarioHandler := handlers.NewUsuarioHandler(repo.Usuario)
 	acudienteHandler := handlers.NewAcudienteHandler()
-	authHandler := handlers.NewAuthHandler(cfg, repo.Usuario, repo.Permiso)
+	authHandler := handlers.NewAuthHandler(cfg, repo.Usuario, repo.Permiso, repo.Rol, repo.RefreshToken, repo.RevokedToken)
 	configHandler := handlers.NewConfigHandler(repo.Rol, repo.Permiso, repo.Modulo)
 
 	e.POST("/auth/login", authHandler.Login)
 	e.POST("/auth/refresh", authHandler.Refresh)
 	e.POST("/auth/logout", authHandler.Logout)
+	e.POST("/auth/logout-all", authHandler.LogoutAll, middleware.JWTAuth(cfg))
 
 	api := e.Group("/api/v1")
 	api.Use(middleware.JWTAuth(cfg))
 
 	adminAPI := api.Group("")
-	adminAPI.Use(middleware.RequireRole("ADMIN"))
+	adminAPI.Use(middleware.RequireRole("ADMIN", "SECRETARIA", "DIRECTOR"))
 
 	api.GET("/instituciones", instHandler.GetAll)
 	api.GET("/instituciones/:id", instHandler.GetByID)

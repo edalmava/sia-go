@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/edalmava/sia/internal/config"
 	"github.com/edalmava/sia/internal/middleware"
@@ -434,13 +435,16 @@ func (h *DocenteHandler) Delete(c echo.Context) error {
 }
 
 type AuthHandler struct {
-	cfg         *config.Config
-	usuarioRepo *repository.UsuarioRepository
-	permisoRepo *repository.PermisoRepository
+	cfg              *config.Config
+	usuarioRepo      *repository.UsuarioRepository
+	permisoRepo      *repository.PermisoRepository
+	rolRepo          *repository.RolRepository
+	refreshTokenRepo *repository.RefreshTokenRepository
+	revokedTokenRepo *repository.RevokedTokenRepository
 }
 
-func NewAuthHandler(cfg *config.Config, usuarioRepo *repository.UsuarioRepository, permisoRepo *repository.PermisoRepository) *AuthHandler {
-	return &AuthHandler{cfg: cfg, usuarioRepo: usuarioRepo, permisoRepo: permisoRepo}
+func NewAuthHandler(cfg *config.Config, usuarioRepo *repository.UsuarioRepository, permisoRepo *repository.PermisoRepository, rolRepo *repository.RolRepository, refreshTokenRepo *repository.RefreshTokenRepository, revokedTokenRepo *repository.RevokedTokenRepository) *AuthHandler {
+	return &AuthHandler{cfg: cfg, usuarioRepo: usuarioRepo, permisoRepo: permisoRepo, rolRepo: rolRepo, refreshTokenRepo: refreshTokenRepo, revokedTokenRepo: revokedTokenRepo}
 }
 
 func (h *AuthHandler) Login(c echo.Context) error {
@@ -480,8 +484,11 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	}
 
 	roleName := "USER"
-	if user.IDRol == 1 {
-		roleName = "ADMIN"
+	if h.rolRepo != nil {
+		rol, err := h.rolRepo.GetByID(user.IDRol)
+		if err == nil && rol != nil {
+			roleName = rol.Nombre
+		}
 	}
 
 	permisos, err := h.permisoRepo.GetPermissionsByUserID(user.IDUsuario)
@@ -490,59 +497,169 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		permisos = []string{}
 	}
 
-	token, err := utils.GenerateToken(h.cfg, user.IDUsuario, user.NombreUsuario, user.IDRol, roleName, permisos)
+	accessToken, accessJTI, expiresIn, err := utils.GenerateAccessToken(h.cfg, user.IDUsuario, user.NombreUsuario, user.IDRol, roleName, permisos)
 	if err != nil {
-		c.Logger().Errorf("Error generating token: %v", err)
+		c.Logger().Errorf("Error generating access token: %v", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "internal_error",
 			Message: "Error al generar token",
 		})
 	}
 
+	refreshToken, tokenHash, expiration, err := utils.GenerateRefreshToken()
+	if err != nil {
+		c.Logger().Errorf("Error generating refresh token: %v", err)
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: "Error al generar refresh token",
+		})
+	}
+
+	if err := h.refreshTokenRepo.Create(tokenHash, accessJTI, user.IDUsuario, expiration, ""); err != nil {
+		c.Logger().Errorf("Error saving refresh token: %v", err)
+	}
+
 	return c.JSON(http.StatusOK, models.LoginResponse{
-		Token: token,
-		Type:  "Bearer",
-		Role:  roleName,
-		IDRol: user.IDRol,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		TokenType:    "Bearer",
+		ExpiresIn:    expiresIn,
+		Role:         roleName,
+		IDRol:        user.IDRol,
 	})
 }
 
 func (h *AuthHandler) Refresh(c echo.Context) error {
-	claims := middleware.GetClaims(c)
-	if claims == nil {
-		return c.JSON(http.StatusUnauthorized, models.ErrorResponse{
-			Error:   "auth_error",
-			Message: "Token inválido",
+	if h.refreshTokenRepo == nil {
+		return dbUnavailable(c)
+	}
+
+	var req models.RefreshTokenRequest
+	if err := c.Bind(&req); err != nil || req.RefreshToken == "" {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Refresh token requerido",
 		})
 	}
 
-	roleName := "USER"
-	if claims.IDRol == 1 {
-		roleName = "ADMIN"
+	tokenHash := utils.HashRefreshToken(req.RefreshToken)
+	storedToken, err := h.refreshTokenRepo.GetByTokenHash(tokenHash)
+	if err != nil {
+		c.Logger().Errorf("Error fetching refresh token: %v", err)
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: "Error al validar refresh token",
+		})
 	}
 
-	permisos, err := h.permisoRepo.GetPermissionsByUserID(claims.IDUsuario)
+	if storedToken == nil || !storedToken.Activo {
+		return c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "auth_error",
+			Message: "Refresh token inválido o expirado",
+		})
+	}
+
+	if time.Now().After(storedToken.FechaExpiracion) {
+		h.refreshTokenRepo.Revoke(tokenHash)
+		return c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "auth_error",
+			Message: "Refresh token expirado",
+		})
+	}
+
+	user, err := h.usuarioRepo.GetByID(storedToken.IDUsuario)
+	if err != nil || user == nil {
+		return c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "auth_error",
+			Message: "Usuario no encontrado",
+		})
+	}
+
+	permisos, err := h.permisoRepo.GetPermissionsByUserID(storedToken.IDUsuario)
 	if err != nil {
 		c.Logger().Errorf("Error fetching permisos: %v", err)
-		permisos = claims.Permisos
+		permisos = []string{}
 	}
 
-	token, err := utils.GenerateToken(h.cfg, claims.IDUsuario, claims.NombreUsuario, claims.IDRol, roleName, permisos)
+	roleName := "USER"
+	if h.rolRepo != nil {
+		rol, err := h.rolRepo.GetByID(user.IDRol)
+		if err == nil && rol != nil {
+			roleName = rol.Nombre
+		}
+	}
+
+	h.refreshTokenRepo.Revoke(tokenHash)
+
+	accessToken, accessJTI, expiresIn, err := utils.GenerateAccessToken(h.cfg, user.IDUsuario, user.NombreUsuario, user.IDRol, roleName, permisos)
 	if err != nil {
+		c.Logger().Errorf("Error generating access token: %v", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "internal_error",
 			Message: "Error al generar token",
 		})
 	}
 
-	return c.JSON(http.StatusOK, models.LoginResponse{
-		Token: token,
-		Type:  "Bearer",
-		Role:  roleName,
-		IDRol: claims.IDRol,
+	refreshToken, newTokenHash, expiration, err := utils.GenerateRefreshToken()
+	if err != nil {
+		c.Logger().Errorf("Error generating refresh token: %v", err)
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: "Error al generar refresh token",
+		})
+	}
+
+	if err := h.refreshTokenRepo.Create(newTokenHash, accessJTI, user.IDUsuario, expiration, ""); err != nil {
+		c.Logger().Errorf("Error saving refresh token: %v", err)
+	}
+
+	return c.JSON(http.StatusOK, models.RefreshTokenResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		TokenType:    "Bearer",
+		ExpiresIn:    expiresIn,
 	})
 }
 
 func (h *AuthHandler) Logout(c echo.Context) error {
-	return c.JSON(http.StatusOK, map[string]string{"message": "Logout exitoso"})
+	if h.refreshTokenRepo == nil {
+		return dbUnavailable(c)
+	}
+
+	jti := middleware.GetJTI(c)
+	if jti != "" && h.revokedTokenRepo != nil {
+		expiresAt := time.Now().Add(time.Duration(h.cfg.JWT.AccessTTLMinutes) * time.Minute)
+		h.revokedTokenRepo.Add(jti, expiresAt)
+	}
+
+	var req models.RefreshTokenRequest
+	if err := c.Bind(&req); err == nil && req.RefreshToken != "" {
+		tokenHash := utils.HashRefreshToken(req.RefreshToken)
+		h.refreshTokenRepo.Revoke(tokenHash)
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "Sesión cerrada exitosamente"})
+}
+
+func (h *AuthHandler) LogoutAll(c echo.Context) error {
+	if h.refreshTokenRepo == nil {
+		return dbUnavailable(c)
+	}
+
+	claims := middleware.GetClaims(c)
+	if claims == nil {
+		return c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error:   "auth_error",
+			Message: "Usuario no autenticado",
+		})
+	}
+
+	jti := middleware.GetJTI(c)
+	if jti != "" && h.revokedTokenRepo != nil {
+		expiresAt := time.Now().Add(time.Duration(h.cfg.JWT.AccessTTLMinutes) * time.Minute)
+		h.revokedTokenRepo.Add(jti, expiresAt)
+	}
+
+	h.refreshTokenRepo.RevokeAllForUser(claims.IDUsuario)
+	return c.JSON(http.StatusOK, map[string]string{"message": "Todas las sesiones cerradas exitosamente"})
 }

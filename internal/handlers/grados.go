@@ -152,16 +152,27 @@ func (h *GradoHandler) Delete(c echo.Context) error {
 }
 
 func (h *GradoHandler) GetAsignaturas(c echo.Context) error {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
 	_ = id
 	return c.JSON(http.StatusOK, []models.Asignatura{})
 }
 
 func (h *GradoHandler) AddAsignatura(c echo.Context) error {
-	id, _ := strconv.Atoi(c.Param("id"))
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
 	_ = id
 	var ga models.GradoAsignatura
-	c.Bind(&ga)
+	if err := c.Bind(&ga); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Datos inválidos",
+		})
+	}
 	return c.JSON(http.StatusCreated, ga)
 }
 

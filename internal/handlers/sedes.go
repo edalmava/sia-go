@@ -23,14 +23,9 @@ func (h *SedeHandler) GetAll(c echo.Context) error {
 		return dbUnavailable(c)
 	}
 
-	offset, _ := strconv.Atoi(c.QueryParam("offset"))
-	limit, _ := strconv.Atoi(c.QueryParam("limit"))
+	offset, limit := parsePagination(c)
 	idInstitucion, _ := strconv.Atoi(c.QueryParam("id_institucion"))
 	nombre := c.QueryParam("nombre")
-
-	if limit == 0 {
-		limit = 20
-	}
 
 	sedes, total, err := h.repo.GetAll(offset, limit, idInstitucion, nombre)
 	if err != nil {

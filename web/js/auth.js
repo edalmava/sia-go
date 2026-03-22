@@ -2,10 +2,28 @@ import { ROLE_NAMES } from './config.js';
 
 const STORAGE_KEYS = {
     TOKEN: 'authToken',
+    REFRESH_TOKEN: 'refreshToken',
     USERNAME: 'username',
     ROLE: 'userRole',
     PERMISSIONS: 'userPermissions'
 };
+
+const AUTH_API = '/auth';
+
+export async function callLogoutEndpoint() {
+    const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
+    if (!refreshToken) return;
+
+    try {
+        await fetch(`${AUTH_API}/logout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_token: refreshToken })
+        });
+    } catch (e) {
+        console.error('Error calling logout endpoint:', e);
+    }
+}
 
 function getLoginPath() {
     const currentPath = window.location.pathname;
@@ -72,8 +90,11 @@ export function hasAnyPermissionPrefix(prefixes) {
     return prefixes.some(prefix => permissions.some(p => p.startsWith(prefix)));
 }
 
-export function logout(redirectTo = null) {
+export async function logout(redirectTo = null) {
+    await callLogoutEndpoint();
+    
     localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USERNAME);
     localStorage.removeItem(STORAGE_KEYS.ROLE);
     localStorage.removeItem(STORAGE_KEYS.PERMISSIONS);

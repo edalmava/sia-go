@@ -13,22 +13,22 @@ func SecurityHeaders() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			res := c.Response().Header()
-			
+
 			// Previene que el navegador intente adivinar el tipo de contenido (MIME sniffing)
 			res.Set("X-Content-Type-Options", "nosniff")
-			
+
 			// Previene ataques de Clickjacking
 			res.Set("X-Frame-Options", "DENY")
-			
+
 			// Habilita el filtro XSS del navegador
 			res.Set("X-XSS-Protection", "1; mode=block")
-			
+
 			// Controla cuánta información de referencia se envía
 			res.Set("Referrer-Policy", "strict-origin-when-cross-origin")
-			
+
 			// Política de transporte estricta (solo si es HTTPS)
 			// res.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-			
+
 			return next(c)
 		}
 	}

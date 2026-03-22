@@ -15,6 +15,7 @@ type Claims struct {
 	IDRol         int      `json:"id_rol"`
 	Rol           string   `json:"rol"`
 	Permisos      []string `json:"permisos"`
+	JTI           string   `json:"jti"`
 	jwt.RegisteredClaims
 }
 
@@ -52,6 +53,7 @@ func JWTAuth(cfg *config.Config) echo.MiddlewareFunc {
 			}
 
 			c.Set("user", claims)
+			c.Set("jti", claims.JTI)
 			return next(c)
 		}
 	}
@@ -63,6 +65,14 @@ func GetClaims(c echo.Context) *Claims {
 		return user.(*Claims)
 	}
 	return nil
+}
+
+func GetJTI(c echo.Context) string {
+	claims := GetClaims(c)
+	if claims != nil {
+		return claims.JTI
+	}
+	return ""
 }
 
 func RequireRole(roles ...string) echo.MiddlewareFunc {
