@@ -1,9 +1,12 @@
 package config
 
 import (
+	"log"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -36,6 +39,11 @@ type DatabaseConfig struct {
 }
 
 func Load() *Config {
+	// Cargar archivo .env si existe
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, using system environment variables")
+	}
+
 	env := getEnv("APP_ENV", "development")
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
