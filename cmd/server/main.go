@@ -25,13 +25,19 @@ func main() {
 	e.Validator = utils.NewValidator()
 
 	// Middlewares de seguridad
-	e.Use(middleware.SecurityHeaders())
+	e.Use(middleware.SecurityHeaders(cfg))
 	e.Use(echoMiddleware.Logger())
 	e.Use(echoMiddleware.Recover())
 
 	// Configuración de CORS más restrictiva
+	allowedOrigins := []string{"http://localhost:8080", "http://127.0.0.1:8080"}
+	if cfg.Env == "production" {
+		// En producción, añadir dominios reales aquí
+		// allowedOrigins = append(allowedOrigins, "https://tusistema.edu.co")
+	}
+
 	e.Use(echoMiddleware.CORSWithConfig(echoMiddleware.CORSConfig{
-		AllowOrigins: []string{"*"}, // TODO: Cambiar por dominios específicos en producción
+		AllowOrigins: allowedOrigins,
 		AllowMethods: []string{http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete},
 		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
 	}))

@@ -3,13 +3,14 @@ package middleware
 import (
 	"net/http"
 
+	"github.com/edalmava/sia/internal/config"
 	"github.com/labstack/echo/v4"
 	echoMiddleware "github.com/labstack/echo/v4/middleware"
 	"golang.org/x/time/rate"
 )
 
 // SecurityHeaders añade cabeceras de seguridad estándar a todas las respuestas
-func SecurityHeaders() echo.MiddlewareFunc {
+func SecurityHeaders(cfg *config.Config) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			res := c.Response().Header()
@@ -26,8 +27,21 @@ func SecurityHeaders() echo.MiddlewareFunc {
 			// Controla cuánta información de referencia se envía
 			res.Set("Referrer-Policy", "strict-origin-when-cross-origin")
 
-			// Política de transporte estricta (solo si es HTTPS)
-			// res.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+			// Content Security Policy (CSP)
+			// Permite scripts del mismo origen y estilos en línea (para simplicidad actual)
+			// En un entorno real se deberían evitar 'unsafe-inline'
+			csp := "default-src 'self'; " +
+				"script-src 'self' 'unsafe-inline'; " +
+				"style-src 'self' 'unsafe-inline'; " +
+				"img-src 'self' data:; " +
+				"font-src 'self'; " +
+				"connect-src 'self';"
+			res.Set("Content-Security-Policy", csp)
+
+			// Política de transporte estricta (solo si es producción)
+			if cfg.Env == "production" {
+				res.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+			}
 
 			return next(c)
 		}

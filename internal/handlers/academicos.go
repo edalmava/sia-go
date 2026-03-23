@@ -45,6 +45,230 @@ func parsePagination(c echo.Context) (int, int) {
 	return offset, limit
 }
 
+type EstudianteHandler struct {
+	repo *repository.EstudianteRepository
+}
+
+func NewEstudianteHandler(repo *repository.EstudianteRepository) *EstudianteHandler {
+	return &EstudianteHandler{repo: repo}
+}
+
+func (h *EstudianteHandler) GetAll(c echo.Context) error {
+	if h.repo == nil {
+		return dbUnavailable(c)
+	}
+	offset, limit := parsePagination(c)
+	estudiantes, total, err := h.repo.GetAll(offset, limit)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: "Error al obtener estudiantes",
+		})
+	}
+	return c.JSON(http.StatusOK, models.PaginatedResponse{
+		Data:       estudiantes,
+		Pagination: models.Pagination{Total: total, Offset: offset, Limit: limit},
+	})
+}
+
+func (h *EstudianteHandler) GetByID(c echo.Context) error {
+	if h.repo == nil {
+		return dbUnavailable(c)
+	}
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
+	e, err := h.repo.GetByID(id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: "Error al obtener estudiante",
+		})
+	}
+	if e == nil {
+		return c.JSON(http.StatusNotFound, models.ErrorResponse{
+			Error:   "not_found",
+			Message: "Estudiante no encontrado",
+		})
+	}
+	return c.JSON(http.StatusOK, e)
+}
+
+func (h *EstudianteHandler) Create(c echo.Context) error {
+	if h.repo == nil {
+		return dbUnavailable(c)
+	}
+	var e models.Estudiante
+	if err := c.Bind(&e); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Datos inválidos",
+		})
+	}
+	if err := h.repo.Create(&e); err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: "Error al crear estudiante",
+		})
+	}
+	return c.JSON(http.StatusCreated, e)
+}
+
+func (h *EstudianteHandler) Update(c echo.Context) error {
+	if h.repo == nil {
+		return dbUnavailable(c)
+	}
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
+	var e models.Estudiante
+	if err := c.Bind(&e); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Datos inválidos",
+		})
+	}
+	e.IDEstudiante = id
+	if err := h.repo.Update(&e); err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: "Error al actualizar estudiante",
+		})
+	}
+	return c.JSON(http.StatusOK, e)
+}
+
+func (h *EstudianteHandler) Delete(c echo.Context) error {
+	if h.repo == nil {
+		return dbUnavailable(c)
+	}
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
+	if err := h.repo.Delete(id); err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: "Error al eliminar estudiante",
+		})
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
+type DocenteHandler struct {
+	repo *repository.DocenteRepository
+}
+
+func NewDocenteHandler(repo *repository.DocenteRepository) *DocenteHandler {
+	return &DocenteHandler{repo: repo}
+}
+
+func (h *DocenteHandler) GetAll(c echo.Context) error {
+	if h.repo == nil {
+		return dbUnavailable(c)
+	}
+	offset, limit := parsePagination(c)
+	docentes, total, err := h.repo.GetAll(offset, limit)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: "Error al obtener docentes",
+		})
+	}
+	return c.JSON(http.StatusOK, models.PaginatedResponse{
+		Data:       docentes,
+		Pagination: models.Pagination{Total: total, Offset: offset, Limit: limit},
+	})
+}
+
+func (h *DocenteHandler) GetByID(c echo.Context) error {
+	if h.repo == nil {
+		return dbUnavailable(c)
+	}
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
+	d, err := h.repo.GetByID(id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: "Error al obtener docente",
+		})
+	}
+	if d == nil {
+		return c.JSON(http.StatusNotFound, models.ErrorResponse{
+			Error:   "not_found",
+			Message: "Docente no encontrado",
+		})
+	}
+	return c.JSON(http.StatusOK, d)
+}
+
+func (h *DocenteHandler) Create(c echo.Context) error {
+	if h.repo == nil {
+		return dbUnavailable(c)
+	}
+	var d models.Docente
+	if err := c.Bind(&d); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Datos inválidos",
+		})
+	}
+	if err := h.repo.Create(&d); err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: "Error al crear docente",
+		})
+	}
+	return c.JSON(http.StatusCreated, d)
+}
+
+func (h *DocenteHandler) Update(c echo.Context) error {
+	if h.repo == nil {
+		return dbUnavailable(c)
+	}
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
+	var d models.Docente
+	if err := c.Bind(&d); err != nil {
+		return c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error:   "validation_error",
+			Message: "Datos inválidos",
+		})
+	}
+	d.IDDocente = id
+	if err := h.repo.Update(&d); err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: "Error al actualizar docente",
+		})
+	}
+	return c.JSON(http.StatusOK, d)
+}
+
+func (h *DocenteHandler) Delete(c echo.Context) error {
+	if h.repo == nil {
+		return dbUnavailable(c)
+	}
+	id, err := parseIDParam(c, "id")
+	if err != nil {
+		return err
+	}
+	if err := h.repo.Delete(id); err != nil {
+		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error:   "internal_error",
+			Message: "Error al eliminar docente",
+		})
+	}
+	return c.NoContent(http.StatusNoContent)
+}
+
 type MatriculaHandler struct{}
 
 func NewMatriculaHandler() *MatriculaHandler {
@@ -587,7 +811,7 @@ func (h *UsuarioHandler) Update(c echo.Context) error {
 	if err := h.repo.Update(&u); err != nil {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "internal_error",
-			Message: "Error al actualizar el usuario",
+			Message: "Error al actualizar the usuario",
 		})
 	}
 

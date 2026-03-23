@@ -370,23 +370,27 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	TokenType    string `json:"token_type"`
-	ExpiresIn    int    `json:"expires_in"`
-	Role         string `json:"role"`
-	IDRol        int    `json:"id_rol"`
+	AccessToken  string   `json:"access_token"`
+	TokenType    string   `json:"token_type"`
+	ExpiresIn    int      `json:"expires_in"`
+	NombreUsuario string  `json:"nombre_usuario"`
+	Role         string   `json:"role"`
+	IDRol        int      `json:"id_rol"`
+	Permisos     []string `json:"permisos"`
 }
 
 type RefreshTokenRequest struct {
-	RefreshToken string `json:"refresh_token" validate:"required"`
+	RefreshToken string `json:"refresh_token,omitempty"` // Opcional, ahora preferimos cookies
 }
 
 type RefreshTokenResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	TokenType    string `json:"token_type"`
-	ExpiresIn    int    `json:"expires_in"`
+	AccessToken  string   `json:"access_token"`
+	TokenType    string   `json:"token_type"`
+	ExpiresIn    int      `json:"expires_in"`
+	NombreUsuario string  `json:"nombre_usuario"`
+	Role         string   `json:"role"`
+	IDRol        int      `json:"id_rol"`
+	Permisos     []string `json:"permisos"`
 }
 
 type RefreshTokenDB struct {

@@ -38,7 +38,7 @@ function initLoginForm() {
             const data = await api.postAuth(AUTH_API + '/login', { username, password });
 
             if (data.access_token) {
-                saveUserData(data, username);
+                saveUserData(data);
                 window.location.href = 'pages/dashboard.html';
             } else {
                 showError(data.message || 'Credenciales inválidas');
@@ -52,22 +52,12 @@ function initLoginForm() {
     });
 }
 
-function saveUserData(data, username) {
+function saveUserData(data) {
     localStorage.setItem('authToken', data.access_token);
-    if (data.refresh_token) {
-        localStorage.setItem('refreshToken', data.refresh_token);
-    }
-    localStorage.setItem('username', username);
-    
-    try {
-        const decoded = jwt_decode(data.access_token);
-        localStorage.setItem('userRole', decoded.rol || 'USER');
-        localStorage.setItem('userPermissions', JSON.stringify(decoded.permisos || []));
-    } catch (e) {
-        console.error('Error decoding token:', e);
-        localStorage.setItem('userRole', 'USER');
-        localStorage.setItem('userPermissions', '[]');
-    }
+    localStorage.setItem('username', data.nombre_usuario);
+    localStorage.setItem('userRole', data.role || 'USER');
+    localStorage.setItem('idRol', data.id_rol);
+    localStorage.setItem('userPermissions', JSON.stringify(data.permisos || []));
 }
 
 function showError(message) {

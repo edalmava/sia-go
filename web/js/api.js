@@ -1,8 +1,7 @@
 import { API_URL, AUTH_API } from './config.js';
 
 const STORAGE_KEYS = {
-    TOKEN: 'authToken',
-    REFRESH_TOKEN: 'refreshToken'
+    TOKEN: 'authToken'
 };
 
 async function getHeaders() {
@@ -14,14 +13,11 @@ async function getHeaders() {
 }
 
 async function refreshAccessToken() {
-    const refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-    if (!refreshToken) return false;
-
     try {
         const response = await fetch(`${AUTH_API}/refresh`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refresh_token: refreshToken })
+            credentials: 'include'
         });
 
         if (!response.ok) {
@@ -32,9 +28,11 @@ async function refreshAccessToken() {
         
         if (data.access_token) {
             localStorage.setItem(STORAGE_KEYS.TOKEN, data.access_token);
-            if (data.refresh_token) {
-                localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, data.refresh_token);
-            }
+            // Actualizar datos del usuario que podrían haber cambiado
+            localStorage.setItem('username', data.nombre_usuario);
+            localStorage.setItem('userRole', data.role || 'USER');
+            localStorage.setItem('idRol', data.id_rol);
+            localStorage.setItem('userPermissions', JSON.stringify(data.permisos || []));
             return true;
         }
     } catch (e) {
@@ -45,11 +43,10 @@ async function refreshAccessToken() {
 
 function clearAuthAndRedirect() {
     localStorage.removeItem(STORAGE_KEYS.TOKEN);
-    localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-    localStorage.removeItem('userData');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userPermissions');
     localStorage.removeItem('username');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('idRol');
+    localStorage.removeItem('userPermissions');
     
     window.location.href = '/web/login.html';
 }
@@ -61,7 +58,8 @@ async function handleResponse(response, retry = true) {
         if (response.status === 401 && retry) {
             const refreshed = await refreshAccessToken();
             if (refreshed) {
-                return handleResponse(response, false);
+                window.location.reload(); 
+                return;
             }
             clearAuthAndRedirect();
             return;
@@ -135,7 +133,8 @@ export const api = {
         const response = await fetch(`${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: JSON.stringify(data),
+            credentials: 'include'
         });
         
         return handleResponse(response);

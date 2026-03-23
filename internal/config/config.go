@@ -7,12 +7,14 @@ import (
 )
 
 type Config struct {
+	Env      string
 	Server   ServerConfig
 	JWT      JWTConfig
 	Database DatabaseConfig
 }
 
 type ServerConfig struct {
+	Env          string
 	Port         string
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
@@ -34,13 +36,16 @@ type DatabaseConfig struct {
 }
 
 func Load() *Config {
+	env := getEnv("APP_ENV", "development")
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		panic("FATAL: JWT_SECRET environment variable is required for security")
 	}
 
 	return &Config{
+		Env: env,
 		Server: ServerConfig{
+			Env:          env,
 			Port:         getEnv("SERVER_PORT", "8080"),
 			ReadTimeout:  30 * time.Second,
 			WriteTimeout: 30 * time.Second,
