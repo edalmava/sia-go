@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"strings"
 
 	"github.com/edalmava/sia/internal/config"
 	"github.com/edalmava/sia/internal/database"
@@ -45,11 +46,11 @@ func main() {
 	// Aplicar Rate Limiter con excepciones para archivos estáticos
 	e.Use(echoMiddleware.RateLimiterWithConfig(echoMiddleware.RateLimiterConfig{
 		Skipper: func(c echo.Context) bool {
-			path := c.Path()
+			path := c.Request().URL.Path
 			// No limitar archivos estáticos, salud o redirecciones iniciales
-			return path == "/health" || path == "/" || len(path) > 5 && path[:5] == "/web/"
+			return path == "/health" || path == "/" || strings.HasPrefix(path, "/web/")
 		},
-		Store: echoMiddleware.NewRateLimiterMemoryStore(20), // Aumentado a 20 peticiones por segundo
+		Store: echoMiddleware.NewRateLimiterMemoryStore(100), // Aumentado a 100 peticiones por segundo
 		IdentifierExtractor: func(ctx echo.Context) (string, error) {
 			return ctx.RealIP(), nil
 		},

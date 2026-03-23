@@ -81,13 +81,13 @@ export function hasAnyPermissionPrefix(prefixes) {
 
 export async function logout(redirectTo = null) {
     await callLogoutEndpoint();
-
+    
     localStorage.removeItem(STORAGE_KEYS.IS_LOGGED_IN);
     localStorage.removeItem(STORAGE_KEYS.USERNAME);
     localStorage.removeItem(STORAGE_KEYS.ROLE);
     localStorage.removeItem(STORAGE_KEYS.PERMISSIONS);
     localStorage.removeItem(STORAGE_KEYS.ID_ROL);
-
+    
     if (redirectTo) {
         window.location.href = redirectTo;
     } else {
@@ -99,11 +99,10 @@ export async function logout(redirectTo = null) {
         }
     }
 }
-...
-export function isLoggedIn() {
-    return !!localStorage.getItem(STORAGE_KEYS.IS_LOGGED_IN);
-}
 
+export function initUserInfo() {
+    const { username, role } = getUserData();
+    
     const userNameEl = document.getElementById('userName');
     const userInitialEl = document.getElementById('userInitial');
     const userRoleEl = document.querySelector('.user-role');
@@ -145,7 +144,7 @@ export function initSidebar() {
 }
 
 export function isLoggedIn() {
-    return !!localStorage.getItem(STORAGE_KEYS.TOKEN);
+    return !!localStorage.getItem(STORAGE_KEYS.IS_LOGGED_IN);
 }
 
 export { STORAGE_KEYS, ROLE_NAMES };
