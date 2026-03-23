@@ -53,7 +53,7 @@ function initLoginForm() {
 }
 
 function saveUserData(data) {
-    localStorage.setItem('authToken', data.access_token);
+    localStorage.setItem('isLoggedIn', 'true');
     localStorage.setItem('username', data.nombre_usuario);
     localStorage.setItem('userRole', data.role || 'USER');
     localStorage.setItem('idRol', data.id_rol);

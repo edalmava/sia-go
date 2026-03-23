@@ -22,23 +22,32 @@ type Claims struct {
 func JWTAuth(cfg *config.Config) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			var tokenString string
+
+			// 1. Intentar obtener desde el header Authorization
 			authHeader := c.Request().Header.Get("Authorization")
-			if authHeader == "" {
+			if authHeader != "" {
+				parts := strings.Split(authHeader, " ")
+				if len(parts) == 2 && parts[0] == "Bearer" {
+					tokenString = parts[1]
+				}
+			}
+
+			// 2. Si no está en el header, intentar obtener desde la cookie HttpOnly
+			if tokenString == "" {
+				cookie, err := c.Cookie("auth_token")
+				if err == nil {
+					tokenString = cookie.Value
+				}
+			}
+
+			if tokenString == "" {
 				return c.JSON(http.StatusUnauthorized, map[string]string{
 					"error":   "auth_error",
 					"message": "Token de autorización requerido",
 				})
 			}
 
-			parts := strings.Split(authHeader, " ")
-			if len(parts) != 2 || parts[0] != "Bearer" {
-				return c.JSON(http.StatusUnauthorized, map[string]string{
-					"error":   "auth_error",
-					"message": "Formato de token inválido",
-				})
-			}
-
-			tokenString := parts[1]
 			claims := &Claims{}
 
 			token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {

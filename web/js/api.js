@@ -5,10 +5,8 @@ const STORAGE_KEYS = {
 };
 
 async function getHeaders() {
-    const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
     return {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Content-Type': 'application/json'
     };
 }
 
@@ -26,15 +24,15 @@ async function refreshAccessToken() {
 
         const data = await response.json();
         
-        if (data.access_token) {
-            localStorage.setItem(STORAGE_KEYS.TOKEN, data.access_token);
-            // Actualizar datos del usuario que podrían haber cambiado
-            localStorage.setItem('username', data.nombre_usuario);
-            localStorage.setItem('userRole', data.role || 'USER');
-            localStorage.setItem('idRol', data.id_rol);
-            localStorage.setItem('userPermissions', JSON.stringify(data.permisos || []));
-            return true;
-        }
+        // El access_token ahora viene en una cookie HttpOnly
+        // Actualizar datos del usuario que podrían haber cambiado
+        localStorage.setItem('username', data.nombre_usuario);
+        localStorage.setItem('userRole', data.role || 'USER');
+        localStorage.setItem('idRol', data.id_rol);
+        localStorage.setItem('userPermissions', JSON.stringify(data.permisos || []));
+        // Guardamos un flag para saber que estamos logueados ya que no podemos leer la cookie HttpOnly
+        localStorage.setItem('isLoggedIn', 'true');
+        return true;
     } catch (e) {
         console.error('Error refreshing token:', e);
     }
@@ -42,7 +40,7 @@ async function refreshAccessToken() {
 }
 
 function clearAuthAndRedirect() {
-    localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('username');
     localStorage.removeItem('userRole');
     localStorage.removeItem('idRol');
@@ -94,7 +92,8 @@ export const api = {
         
         const response = await fetch(url, {
             method: 'GET',
-            headers: await getHeaders()
+            headers: await getHeaders(),
+            credentials: 'include'
         });
         
         return handleResponse(response);
@@ -104,7 +103,8 @@ export const api = {
         const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'POST',
             headers: await getHeaders(),
-            body: JSON.stringify(data)
+            body: JSON.stringify(data),
+            credentials: 'include'
         });
         
         return handleResponse(response);
@@ -114,7 +114,8 @@ export const api = {
         const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'PUT',
             headers: await getHeaders(),
-            body: JSON.stringify(data)
+            body: JSON.stringify(data),
+            credentials: 'include'
         });
         
         return handleResponse(response);
@@ -123,7 +124,8 @@ export const api = {
     async delete(endpoint) {
         const response = await fetch(`${API_URL}${endpoint}`, {
             method: 'DELETE',
-            headers: await getHeaders()
+            headers: await getHeaders(),
+            credentials: 'include'
         });
         
         return handleResponse(response);

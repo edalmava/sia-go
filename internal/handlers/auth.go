@@ -37,12 +37,36 @@ func (h *AuthHandler) setRefreshTokenCookie(c echo.Context, token string, expira
 	c.SetCookie(cookie)
 }
 
+func (h *AuthHandler) setAccessTokenCookie(c echo.Context, token string, expirationMinutes int) {
+	cookie := new(http.Cookie)
+	cookie.Name = "auth_token"
+	cookie.Value = token
+	cookie.Expires = time.Now().Add(time.Duration(expirationMinutes) * time.Minute)
+	cookie.Path = "/" // Se envía a todas las rutas de la API
+	cookie.HttpOnly = true
+	cookie.Secure = h.cfg.Env == "production"
+	cookie.SameSite = http.SameSiteStrictMode
+	c.SetCookie(cookie)
+}
+
 func (h *AuthHandler) clearRefreshTokenCookie(c echo.Context) {
 	cookie := new(http.Cookie)
 	cookie.Name = "refresh_token"
 	cookie.Value = ""
 	cookie.Expires = time.Now().Add(-1 * time.Hour)
 	cookie.Path = "/auth"
+	cookie.HttpOnly = true
+	cookie.Secure = h.cfg.Env == "production"
+	cookie.SameSite = http.SameSiteStrictMode
+	c.SetCookie(cookie)
+}
+
+func (h *AuthHandler) clearAccessTokenCookie(c echo.Context) {
+	cookie := new(http.Cookie)
+	cookie.Name = "auth_token"
+	cookie.Value = ""
+	cookie.Expires = time.Now().Add(-1 * time.Hour)
+	cookie.Path = "/"
 	cookie.HttpOnly = true
 	cookie.Secure = h.cfg.Env == "production"
 	cookie.SameSite = http.SameSiteStrictMode
@@ -121,11 +145,12 @@ func (h *AuthHandler) Login(c echo.Context) error {
 		c.Logger().Errorf("Error saving refresh token: %v", err)
 	}
 
-	// Establecer la cookie HttpOnly
+	// Establecer cookies HttpOnly
 	h.setRefreshTokenCookie(c, refreshToken, expiration)
+	h.setAccessTokenCookie(c, accessToken, h.cfg.JWT.AccessTTLMinutes)
 
 	return c.JSON(http.StatusOK, models.LoginResponse{
-		AccessToken:   accessToken,
+		AccessToken:   "", // Ya no se envía en el cuerpo por seguridad
 		TokenType:     "Bearer",
 		ExpiresIn:     expiresIn,
 		NombreUsuario: user.NombreUsuario,
@@ -170,6 +195,7 @@ func (h *AuthHandler) Refresh(c echo.Context) error {
 	if time.Now().After(storedToken.FechaExpiracion) {
 		h.refreshTokenRepo.Revoke(tokenHash)
 		h.clearRefreshTokenCookie(c)
+		h.clearAccessTokenCookie(c)
 		return c.JSON(http.StatusUnauthorized, models.ErrorResponse{
 			Error:   "auth_error",
 			Message: "Refresh token expirado",
@@ -223,11 +249,12 @@ func (h *AuthHandler) Refresh(c echo.Context) error {
 		c.Logger().Errorf("Error saving refresh token: %v", err)
 	}
 
-	// Establecer la nueva cookie
+	// Establecer las nuevas cookies
 	h.setRefreshTokenCookie(c, newRefreshToken, expiration)
+	h.setAccessTokenCookie(c, accessToken, h.cfg.JWT.AccessTTLMinutes)
 
 	return c.JSON(http.StatusOK, models.RefreshTokenResponse{
-		AccessToken:   accessToken,
+		AccessToken:   "", // Ya no se envía en el cuerpo
 		TokenType:     "Bearer",
 		ExpiresIn:     expiresIn,
 		NombreUsuario: user.NombreUsuario,
@@ -256,8 +283,9 @@ func (h *AuthHandler) Logout(c echo.Context) error {
 		h.refreshTokenRepo.Revoke(tokenHash)
 	}
 
-	// Limpiar la cookie
+	// Limpiar las cookies
 	h.clearRefreshTokenCookie(c)
+	h.clearAccessTokenCookie(c)
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "Sesión cerrada exitosamente"})
 }
@@ -283,8 +311,9 @@ func (h *AuthHandler) LogoutAll(c echo.Context) error {
 
 	h.refreshTokenRepo.RevokeAllForUser(claims.IDUsuario)
 	
-	// Limpiar la cookie del cliente actual
+	// Limpiar las cookies del cliente actual
 	h.clearRefreshTokenCookie(c)
+	h.clearAccessTokenCookie(c)
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "Todas las sesiones cerradas exitosamente"})
 }
