@@ -37,11 +37,12 @@ function initLoginForm() {
         try {
             const data = await api.postAuth(AUTH_API + '/login', { username, password });
 
-            if (data.access_token) {
+            // Ahora el token viene en una cookie HttpOnly, el objeto data contiene el resto de la info
+            if (data) {
                 saveUserData(data);
                 window.location.href = 'pages/dashboard.html';
             } else {
-                showError(data.message || 'Credenciales inválidas');
+                showError('Error al iniciar sesión');
             }
         } catch (error) {
             showError(error.data?.message || 'Credenciales inválidas');
