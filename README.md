@@ -20,6 +20,7 @@ SIA es un sistema integral de gestión escolar diseñado para instituciones educ
 - **Backend:** [Go](https://go.dev/) (v1.24.1) con el framework [Echo](https://echo.labstack.com/).
 - **Base de Datos:** PostgreSQL (usando `lib/pq`).
 - **Frontend:** HTML5, CSS3 y JavaScript nativo (sin frameworks pesados).
+- **Gestión de Entorno:** [godotenv](https://github.com/joho/godotenv) para carga automática de archivos `.env`.
 - **Autenticación:** JWT (JSON Web Tokens).
 
 ## 📁 Estructura del Proyecto
