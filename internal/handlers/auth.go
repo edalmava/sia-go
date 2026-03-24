@@ -88,7 +88,7 @@ func (h *AuthHandler) Login(c echo.Context) error {
 
 	user, err := h.usuarioRepo.GetByUsername(req.Username)
 	if err != nil {
-		c.Logger().Errorf("Error fetching user: %v", err)
+		c.Logger().Errorf("Error fetching user for login: %v", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "internal_error",
 			Message: "Error al iniciar sesión",
@@ -96,6 +96,7 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	}
 
 	if user == nil {
+		c.Logger().Warnf("Login failed: user not found or inactive: %s", req.Username)
 		return c.JSON(http.StatusUnauthorized, models.ErrorResponse{
 			Error:   "auth_error",
 			Message: "Credenciales inválidas",
@@ -103,6 +104,7 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	}
 
 	if !utils.VerifyPassword(req.Password, user.Clave) {
+		c.Logger().Warnf("Login failed: password mismatch for user: %s", req.Username)
 		return c.JSON(http.StatusUnauthorized, models.ErrorResponse{
 			Error:   "auth_error",
 			Message: "Credenciales inválidas",

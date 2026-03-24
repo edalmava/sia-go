@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configuración - SIA</title>
+    <title>Gestión de Usuarios - SIA</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-  <script type="module" crossorigin src="/web/js/pages/configuracion-CqW8hiWS.js"></script>
-  <link rel="modulepreload" crossorigin href="/web/js/ui-CtHqQ12e.js">
-  <link rel="stylesheet" crossorigin href="/web/css/ui-B3C6zuqY.css">
-  <link rel="stylesheet" crossorigin href="/web/css/04-layout-CJ4glwVE.css">
+    <link rel="stylesheet" href="../css/01-variables.css">
+    <link rel="stylesheet" href="../css/02-base.css">
+    <link rel="stylesheet" href="../css/03-components.css">
+    <link rel="stylesheet" href="../css/04-layout.css">
 </head>
 <body>
     <div class="dashboard-layout">
@@ -83,7 +83,7 @@
                     </svg>
                     <span>Reportes</span>
                 </a>
-                <a href="usuarios.html" class="nav-item" id="usersLink" style="display: none;" data-permiso="usuarios_ver">
+                <a href="usuarios.html" class="nav-item active" id="usersLink">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                         <circle cx="9" cy="7" r="4"/>
@@ -92,7 +92,7 @@
                     </svg>
                     <span>Usuarios</span>
                 </a>
-                <a href="configuracion.html" class="nav-item active" id="settingsLink">
+                <a href="configuracion.html" class="nav-item" id="settingsLink" style="display: none;" data-permiso="roles_ver">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="3"/>
                         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -118,10 +118,17 @@
             <!-- Header -->
             <header class="dashboard-header">
                 <div class="header-left">
-                    <h1>Configuración</h1>
-                    <p class="header-subtitle">Gestión de roles y permisos del sistema</p>
+                    <h1>Gestión de Usuarios</h1>
+                    <p class="header-subtitle">Administra los usuarios del sistema</p>
                 </div>
                 <div class="header-right">
+                    <button class="btn btn-primary" id="addUserBtn" style="display: none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"/>
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                        Nuevo Usuario
+                    </button>
                     <div class="user-info">
                         <div class="user-avatar">
                             <span id="userInitial">A</span>
@@ -134,149 +141,171 @@
                 </div>
             </header>
 
-            <!-- Tabs -->
-            <div class="tabs">
-                <button class="tab-btn active" data-tab="roles">Roles</button>
-                <button class="tab-btn" data-tab="permisos">Permisos</button>
-                <button class="tab-btn" data-tab="modulos">Módulos</button>
-            </div>
-
-            <!-- Tab: Roles -->
-            <div class="tab-content active" id="roles-tab">
-                <div class="settings-section">
-                    <div class="section-header">
-                        <h2>Gestión de Roles</h2>
-                        <button class="btn btn-primary" id="addRoleBtn">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="12" y1="5" x2="12" y2="19"/>
-                                <line x1="5" y1="12" x2="19" y2="12"/>
-                            </svg>
-                            Nuevo Rol
-                        </button>
-                    </div>
-                    <div class="table-card">
-                        <div class="table-container">
-                            <table class="table settings-table">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Nombre</th>
-                                        <th>Descripción</th>
-                                        <th>Sistema</th>
-                                        <th>Permisos</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="rolesTableBody">
-                                    <tr>
-                                        <td colspan="6" class="loading-cell">Cargando roles...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tab: Permisos -->
-            <div class="tab-content" id="permisos-tab">
-                <div class="settings-section">
-                    <div class="section-header">
-                        <h2>Gestión de Permisos</h2>
-                    </div>
-                    <div class="filters">
+            <!-- Users Table -->
+            <section class="users-section">
+                <div class="table-container">
+                    <div class="card-header">
                         <div class="search-bar">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="11" cy="11" r="8"/>
                                 <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                             </svg>
-                            <input type="text" id="permisoSearch" class="form-control" placeholder="Buscar permisos...">
-                        </div>
-                        <select id="moduloFilter" class="form-control" style="max-width: 200px;">
-                            <option value="">Todos los módulos</option>
-                        </select>
-                    </div>
-                    <div class="table-card">
-                        <div class="table-container">
-                            <table class="table settings-table">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Nombre</th>
-                                        <th>Código</th>
-                                        <th>Módulo</th>
-                                        <th>Descripción</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="permisosTableBody">
-                                    <tr>
-                                        <td colspan="5" class="loading-cell">Cargando permisos...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            <input type="text" id="searchInput" class="form-control" placeholder="Buscar usuarios...">
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Tab: Módulos -->
-            <div class="tab-content" id="modulos-tab">
-                <div class="settings-section">
-                    <div class="section-header">
-                        <h2>Gestión de Módulos</h2>
+                    
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Rol</th>
+                                <th>Estado</th>
+                                <th>Docente</th>
+                                <th>Estudiante</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                            <tbody id="usersTableBody">
+                                <tr>
+                                    <td colspan="6" class="loading-cell">Cargando usuarios...</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="modules-grid" id="modulosGrid">
-                        <div class="loading-card">Cargando módulos...</div>
-                    </div>
                 </div>
-            </div>
+            </section>
         </main>
     </div>
 
-    <!-- Modal for Role -->
-    <div class="modal-overlay" id="roleModal">
+    <!-- Modal for Create/Edit User -->
+    <div class="modal-overlay" id="userModal">
         <div class="modal">
             <div class="modal-header">
-                <h2 id="roleModalTitle">Nuevo Rol</h2>
-                <button class="modal-close" id="closeRoleModal">
+                <h2 id="modalTitle">Nuevo Usuario</h2>
+                <button class="modal-close" id="closeModal">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"/>
                         <line x1="6" y1="6" x2="18" y2="18"/>
                     </svg>
                 </button>
             </div>
-            <form id="roleForm">
+            <form id="userForm">
                 <div class="modal-body">
-                    <input type="hidden" id="roleId">
                     <div class="form-group">
-                        <label for="roleName" class="form-label">Nombre del Rol</label>
-                        <input type="text" id="roleName" name="nombre" class="form-control" required placeholder="Ej: DOCENTE">
+                        <label for="username" class="form-label">Nombre de Usuario</label>
+                        <input type="text" id="username" name="nombre_usuario" class="form-control" required 
+                               pattern="^[a-zA-Z0-9_]+$" minlength="5" maxlength="50"
+                               placeholder="Ingrese nombre de usuario">
+                        <span class="text-xs text-muted">Mínimo 5 caracteres, solo letras, números y guiones bajos</span>
                     </div>
+                    
+                    <div class="form-group" id="passwordGroup">
+                        <label for="password" class="form-label">Contraseña</label>
+                        <input type="password" id="password" name="clave" class="form-control"
+                               minlength="8" maxlength="64" placeholder="Mínimo 8 caracteres">
+                    </div>
+                    
                     <div class="form-group">
-                        <label for="roleDesc" class="form-label">Descripción</label>
-                        <input type="text" id="roleDesc" name="descripcion" class="form-control" placeholder="Descripción del rol">
+                        <label for="role" class="form-label">Rol</label>
+                        <select id="role" name="id_rol" class="form-control" required>
+                            <option value="">Seleccione un rol</option>
+                            <option value="1">ADMIN</option>
+                            <option value="2">DIRECTOR</option>
+                            <option value="3">DOCENTE</option>
+                            <option value="4">ESTUDIANTE</option>
+                            <option value="5">ACUDIENTE</option>
+                        </select>
                     </div>
+                    
+                    <div class="form-group">
+                        <label for="docente" class="form-label">Docente (opcional)</label>
+                        <select id="docente" name="id_docente" class="form-control">
+                            <option value="">Sin vincular</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="estudiante" class="form-label">Estudiante (opcional)</label>
+                        <select id="estudiante" name="id_estudiante" class="form-control">
+                            <option value="">Sin vincular</option>
+                        </select>
+                    </div>
+                    
                     <div class="form-group">
                         <label class="checkbox-group">
-                            <input type="checkbox" id="roleSistema" name="es_rol_sistema" class="checkbox-input">
-                            <span>Rol de sistema (no eliminable)</span>
+                            <input type="checkbox" id="activo" name="activo" class="checkbox-input" checked>
+                            <span>Usuario activo</span>
                         </label>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Permisos</label>
-                        <div class="permissions-grid" id="rolePermissions"></div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" id="cancelRoleBtn">Cancelar</button>
-                    <button type="submit" class="btn-primary">Guardar</button>
+                    <button type="button" class="btn btn-secondary" id="cancelBtn">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Modal for Change Password -->
+    <div class="modal-overlay" id="passwordModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Cambiar Contraseña</h2>
+                <button class="modal-close" id="closePasswordModal">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <form id="passwordForm">
+                <div class="modal-body">
+                    <input type="hidden" id="passwordUserId">
+                    <div class="form-group">
+                        <label for="newPassword" class="form-label">Nueva Contraseña</label>
+                        <input type="password" id="newPassword" name="newPassword" class="form-control"
+                               minlength="8" maxlength="64" required placeholder="Mínimo 8 caracteres">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword" class="form-label">Confirmar Contraseña</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" class="form-control"
+                               minlength="8" maxlength="64" required placeholder="Repita la contraseña">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelPasswordBtn">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Cambiar Contraseña</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal modal-small">
+            <div class="modal-header">
+                <h2>Confirmar Eliminación</h2>
+                <button class="modal-close" id="closeDeleteModal">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>¿Está seguro de eliminar el usuario <strong id="deleteUserName"></strong>?</p>
+                <p class="text-muted">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="cancelDeleteBtn">Cancelar</button>
+                <button type="button" class="btn-danger" id="confirmDeleteBtn">Eliminar</button>
+            </div>
         </div>
     </div>
 
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
+    <script type="module" src="../js/users.js"></script>
 </body>
 </html>
