@@ -184,3 +184,30 @@ export function handleApiError(error, defaultMessage = 'Ha ocurrido un error') {
     const message = error.data?.message || error.message || defaultMessage;
     showToast(message, 'error');
 }
+
+export function initMobileMenu() {
+    const toggleBtn = document.getElementById('menuToggle');
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    if (!toggleBtn || !sidebar || !overlay) return;
+
+    const toggleMenu = () => {
+        sidebar.classList.toggle('active');
+        overlay.classList.toggle('active');
+        document.body.classList.toggle('overflow-hidden');
+    };
+
+    toggleBtn.addEventListener('click', toggleMenu);
+    overlay.addEventListener('click', toggleMenu);
+
+    // Close on link click
+    const navLinks = sidebar.querySelectorAll('.nav-item');
+    navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            if (sidebar.classList.contains('active')) {
+                toggleMenu();
+            }
+        });
+    });
+}

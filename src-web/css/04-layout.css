@@ -495,4 +495,42 @@
         align-items: flex-start;
         gap: var(--space-4);
     }
+
+    .menu-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background-color: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        color: var(--text-primary);
+        cursor: pointer;
+        z-index: var(--z-fixed);
+    }
+
+    .sidebar.active {
+        transform: translateX(0);
+    }
+
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: calc(var(--z-sticky) - 1);
+    }
+
+    .sidebar-overlay.active {
+        display: block;
+    }
+}
+
+.menu-toggle {
+    display: none;
 }

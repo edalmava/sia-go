@@ -1,6 +1,6 @@
 import { checkAuth, hasPermission, initUserInfo, initLogout, initSidebar, getUserData } from '../js/auth.js';
 import { usuarioApi, rolApi, api } from '../js/api.js';
-import { showToast, escapeHtml, openModal, closeModal, handleApiError, createStatusBadge, createRoleBadge } from '../js/ui.js';
+import { showToast, escapeHtml, openModal, closeModal, handleApiError, createStatusBadge, createRoleBadge, initMobileMenu } from '../js/ui.js';
 
 let users = [];
 let editingUserId = null;
@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initUserInfo();
     initSidebar();
     initLogout();
+    initMobileMenu();
     initUI();
     initEventListeners();
 

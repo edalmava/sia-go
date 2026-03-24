@@ -8,10 +8,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-  <script type="module" crossorigin src="/web/js/pages/configuracion-CqW8hiWS.js"></script>
-  <link rel="modulepreload" crossorigin href="/web/js/ui-CtHqQ12e.js">
+  <script type="module" crossorigin src="/web/js/pages/configuracion-BVhd_o8V.js"></script>
+  <link rel="modulepreload" crossorigin href="/web/js/ui-dNetwNdp.js">
   <link rel="stylesheet" crossorigin href="/web/css/ui-B3C6zuqY.css">
-  <link rel="stylesheet" crossorigin href="/web/css/04-layout-CJ4glwVE.css">
+  <link rel="stylesheet" crossorigin href="/web/css/04-layout-BENAMU6N.css">
 </head>
 <body>
     <div class="dashboard-layout">
@@ -111,16 +111,30 @@
                     <span>Cerrar Sesión</span>
                 </a>
             </div>
-        </aside>
+            </aside>
 
-        <!-- Main Content -->
-        <main class="main-content">
+            <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+            <!-- Main Content -->
+            <main class="main-content">
             <!-- Header -->
             <header class="dashboard-header">
                 <div class="header-left">
-                    <h1>Configuración</h1>
-                    <p class="header-subtitle">Gestión de roles y permisos del sistema</p>
+                    <div class="flex items-center gap-4">
+                        <button class="menu-toggle" id="menuToggle">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="4" y1="12" x2="20" y2="12"></line>
+                                <line x1="4" y1="6" x2="20" y2="6"></line>
+                                <line x1="4" y1="18" x2="20" y2="18"></line>
+                            </svg>
+                        </button>
+                        <div>
+                            <h1>Configuración del Sistema</h1>
+                            <p class="header-subtitle">Administra roles, permisos y módulos</p>
+                        </div>
+                    </div>
                 </div>
+
                 <div class="header-right">
                     <div class="user-info">
                         <div class="user-avatar">

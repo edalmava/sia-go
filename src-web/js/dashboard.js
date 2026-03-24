@@ -1,6 +1,6 @@
 import { checkAuth, initUserInfo, initLogout, initSidebar } from '../js/auth.js';
 import { institucionApi } from '../js/api.js';
-import { showToast } from '../js/ui.js';
+import { showToast, initMobileMenu } from '../js/ui.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     if (!checkAuth()) {
@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSidebar();
     initLogout();
     initNavItems();
+    initMobileMenu();
 
     loadDashboardData();
 });

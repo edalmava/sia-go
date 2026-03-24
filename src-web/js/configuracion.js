@@ -1,6 +1,6 @@
 import { checkAuth, hasPermission, hasAnyPermissionPrefix, initUserInfo, initLogout, initSidebar, getUserData } from '../js/auth.js';
 import { rolApi, permisoApi, moduloApi, api } from '../js/api.js';
-import { showToast, escapeHtml, openModal, closeModal, handleApiError } from '../js/ui.js';
+import { showToast, escapeHtml, openModal, closeModal, handleApiError, initMobileMenu } from '../js/ui.js';
 
 let allPermisos = [];
 let allModulos = [];
@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initUserInfo();
     initSidebar();
     initLogout();
+    initMobileMenu();
     initTabs();
     initUI();
     initEventListeners();
