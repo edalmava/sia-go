@@ -474,6 +474,17 @@
     flex-direction: column;
     justify-content: space-between;
 }
+/* ---------- Utilities ---------- */
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.gap-2 { gap: var(--space-2); }
+.gap-4 { gap: var(--space-4); }
+
+.menu-toggle {
+    display: none;
+}
+
 @media (max-width: 1024px) {
     .dashboard-grid {
         grid-template-columns: 1fr;
@@ -529,8 +540,4 @@
     .sidebar-overlay.active {
         display: block;
     }
-}
-
-.menu-toggle {
-    display: none;
 }
