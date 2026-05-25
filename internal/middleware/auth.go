@@ -9,6 +9,10 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type RevocationChecker interface {
+	IsRevoked(jti string) (bool, error)
+}
+
 type Claims struct {
 	IDUsuario     int      `json:"id_usuario"`
 	NombreUsuario string   `json:"nombre_usuario"`
@@ -19,7 +23,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func JWTAuth(cfg *config.Config) echo.MiddlewareFunc {
+func JWTAuth(cfg *config.Config, revocationChecker ...RevocationChecker) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			var tokenString string
@@ -59,6 +63,18 @@ func JWTAuth(cfg *config.Config) echo.MiddlewareFunc {
 					"error":   "auth_error",
 					"message": "Token inválido o expirado",
 				})
+			}
+
+			if len(revocationChecker) > 0 && revocationChecker[0] != nil {
+				revoked, err := revocationChecker[0].IsRevoked(claims.JTI)
+				if err != nil {
+					c.Logger().Errorf("Error checking token revocation: %v", err)
+				} else if revoked {
+					return c.JSON(http.StatusUnauthorized, map[string]string{
+						"error":   "auth_error",
+						"message": "Token revocado",
+					})
+				}
 			}
 
 			c.Set("user", claims)

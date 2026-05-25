@@ -112,3 +112,26 @@ func (r *UsuarioRepository) Delete(id int) error {
 	}
 	return nil
 }
+
+func (r *UsuarioRepository) GetByRol(rolID int) ([]models.UsuarioResponse, error) {
+	rows, err := r.db.Query(
+		`SELECT id_usuario, nombre_usuario, id_docente, id_estudiante, activo, id_rol
+		 FROM usuarios WHERE id_rol = $1 AND activo = true`,
+		rolID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var usuarios []models.UsuarioResponse
+	for rows.Next() {
+		var u models.UsuarioResponse
+		if err := rows.Scan(&u.IDUsuario, &u.NombreUsuario, &u.IDDocente, &u.IDEstudiante, &u.Activo, &u.IDRol); err != nil {
+			return nil, err
+		}
+		usuarios = append(usuarios, u)
+	}
+
+	return usuarios, nil
+}

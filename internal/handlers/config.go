@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/edalmava/sia/internal/middleware"
 	"github.com/edalmava/sia/internal/models"
@@ -11,17 +12,62 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type ConfigHandler struct {
-	rolRepo     *repository.RolRepository
-	permisoRepo *repository.PermisoRepository
-	moduloRepo  *repository.ModuloRepository
+type permisoCacheInvalidator interface {
+	InvalidateUser(userID int)
+	InvalidateAll()
 }
 
-func NewConfigHandler(rolRepo *repository.RolRepository, permisoRepo *repository.PermisoRepository, moduloRepo *repository.ModuloRepository) *ConfigHandler {
+type rolCacheInvalidator interface {
+	InvalidateAll()
+}
+
+type ConfigHandler struct {
+	rolRepo          repository.RolReader
+	rolWriter        repository.RolWriter
+	permisoRepo      repository.PermisoReader
+	permisoCache     permisoCacheInvalidator
+	rolCache         rolCacheInvalidator
+	moduloRepo       repository.ModuloReader
+	usuarioRepo      repository.UsuarioReader
+	refreshTokenRepo *repository.RefreshTokenRepository
+	revokedTokenRepo *repository.RevokedTokenRepository
+}
+
+func NewConfigHandler(rolReader repository.RolReader, rolWriter repository.RolWriter, permisoRepo repository.PermisoReader, permisoCache permisoCacheInvalidator, rolCache rolCacheInvalidator, moduloRepo repository.ModuloReader, usuarioRepo repository.UsuarioReader, refreshTokenRepo *repository.RefreshTokenRepository, revokedTokenRepo *repository.RevokedTokenRepository) *ConfigHandler {
 	return &ConfigHandler{
-		rolRepo:     rolRepo,
-		permisoRepo: permisoRepo,
-		moduloRepo:  moduloRepo,
+		rolRepo:          rolReader,
+		rolWriter:        rolWriter,
+		permisoRepo:      permisoRepo,
+		permisoCache:     permisoCache,
+		rolCache:         rolCache,
+		moduloRepo:       moduloRepo,
+		usuarioRepo:      usuarioRepo,
+		refreshTokenRepo: refreshTokenRepo,
+		revokedTokenRepo: revokedTokenRepo,
+	}
+}
+
+func (h *ConfigHandler) forceLogoutUsersByRol(rolID int) {
+	if h.usuarioRepo == nil || h.refreshTokenRepo == nil || h.revokedTokenRepo == nil {
+		return
+	}
+
+	users, err := h.usuarioRepo.GetByRol(rolID)
+	if err != nil {
+		return
+	}
+
+	for _, user := range users {
+		jtis, err := h.refreshTokenRepo.GetActiveJTIsByUserID(user.IDUsuario)
+		if err == nil {
+			for _, jti := range jtis {
+				_ = h.revokedTokenRepo.Add(jti, time.Now().Add(24*time.Hour))
+			}
+		}
+		_ = h.refreshTokenRepo.RevokeAllForUser(user.IDUsuario)
+		if h.permisoCache != nil {
+			h.permisoCache.InvalidateUser(user.IDUsuario)
+		}
 	}
 }
 
@@ -106,7 +152,7 @@ func (h *ConfigHandler) CreateRole(c echo.Context) error {
 		EsRolSistema: req.EsRolSistema,
 	}
 
-	if err := h.rolRepo.Create(rol); err != nil {
+	if err := h.rolWriter.Create(rol); err != nil {
 		c.Logger().Errorf("Error creating rol: %v", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "internal_error",
@@ -115,7 +161,11 @@ func (h *ConfigHandler) CreateRole(c echo.Context) error {
 	}
 
 	if len(req.Permisos) > 0 {
-		h.rolRepo.SetPermisos(rol.IDRol, req.Permisos)
+		h.rolWriter.SetPermisos(rol.IDRol, req.Permisos)
+	}
+
+	if h.rolCache != nil {
+		h.rolCache.InvalidateAll()
 	}
 
 	if claims := middleware.GetClaims(c); claims != nil {
@@ -188,7 +238,7 @@ func (h *ConfigHandler) UpdateRole(c echo.Context) error {
 		EsRolSistema: req.EsRolSistema,
 	}
 
-	if err := h.rolRepo.Update(rol); err != nil {
+	if err := h.rolWriter.Update(rol); err != nil {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "internal_error",
 			Message: "Error al actualizar el rol",
@@ -196,7 +246,12 @@ func (h *ConfigHandler) UpdateRole(c echo.Context) error {
 	}
 
 	if req.Permisos != nil {
-		h.rolRepo.SetPermisos(id, req.Permisos)
+		h.rolWriter.SetPermisos(id, req.Permisos)
+		h.forceLogoutUsersByRol(id)
+	}
+
+	if h.rolCache != nil {
+		h.rolCache.InvalidateAll()
 	}
 
 	if claims := middleware.GetClaims(c); claims != nil {
@@ -241,11 +296,17 @@ func (h *ConfigHandler) DeleteRole(c echo.Context) error {
 		})
 	}
 
-	if err := h.rolRepo.Delete(id); err != nil {
+	h.forceLogoutUsersByRol(id)
+
+	if err := h.rolWriter.Delete(id); err != nil {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "internal_error",
 			Message: "Error al eliminar el rol",
 		})
+	}
+
+	if h.rolCache != nil {
+		h.rolCache.InvalidateAll()
 	}
 
 	if claims := middleware.GetClaims(c); claims != nil {

@@ -26,10 +26,10 @@ func TestLoginProduction(t *testing.T) {
 	}
 
 	e := echo.New()
-	
-	// We need a real-ish repository or a mock. 
-    // Since we want to test the handler logic, a nil repo will return 503.
-    // Let's just see if the handler itself has some logic that returns 401.
+
+	// We need a real-ish repository or a mock.
+	// Since we want to test the handler logic, a nil repo will return 503.
+	// Let's just see if the handler itself has some logic that returns 401.
 
 	reqJSON := `{"username":"admin","password":"admin"}`
 	req := httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(reqJSON))

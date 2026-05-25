@@ -62,6 +62,28 @@ func (r *RefreshTokenRepository) RevokeAll() error {
 	return err
 }
 
+func (r *RefreshTokenRepository) GetActiveJTIsByUserID(userID int) ([]string, error) {
+	rows, err := r.db.Query(
+		`SELECT jti FROM refresh_tokens WHERE id_usuario = $1 AND activo = true AND jti IS NOT NULL AND jti != ''`,
+		userID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var jtis []string
+	for rows.Next() {
+		var jti string
+		if err := rows.Scan(&jti); err != nil {
+			return nil, err
+		}
+		jtis = append(jtis, jti)
+	}
+
+	return jtis, nil
+}
+
 func (r *RefreshTokenRepository) DeleteExpired() (int64, error) {
 	result, err := r.db.Exec(
 		`DELETE FROM refresh_tokens WHERE fecha_expiracion < $1 OR activo = false`,

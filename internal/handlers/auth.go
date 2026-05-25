@@ -14,14 +14,14 @@ import (
 
 type AuthHandler struct {
 	cfg              *config.Config
-	usuarioRepo      *repository.UsuarioRepository
-	permisoRepo      *repository.PermisoRepository
-	rolRepo          *repository.RolRepository
+	usuarioRepo      repository.UsuarioReader
+	permisoRepo      repository.PermisoReader
+	rolRepo          repository.RolReader
 	refreshTokenRepo *repository.RefreshTokenRepository
 	revokedTokenRepo *repository.RevokedTokenRepository
 }
 
-func NewAuthHandler(cfg *config.Config, usuarioRepo *repository.UsuarioRepository, permisoRepo *repository.PermisoRepository, rolRepo *repository.RolRepository, refreshTokenRepo *repository.RefreshTokenRepository, revokedTokenRepo *repository.RevokedTokenRepository) *AuthHandler {
+func NewAuthHandler(cfg *config.Config, usuarioRepo repository.UsuarioReader, permisoRepo repository.PermisoReader, rolRepo repository.RolReader, refreshTokenRepo *repository.RefreshTokenRepository, revokedTokenRepo *repository.RevokedTokenRepository) *AuthHandler {
 	return &AuthHandler{cfg: cfg, usuarioRepo: usuarioRepo, permisoRepo: permisoRepo, rolRepo: rolRepo, refreshTokenRepo: refreshTokenRepo, revokedTokenRepo: revokedTokenRepo}
 }
 
@@ -312,7 +312,7 @@ func (h *AuthHandler) LogoutAll(c echo.Context) error {
 	}
 
 	h.refreshTokenRepo.RevokeAllForUser(claims.IDUsuario)
-	
+
 	// Limpiar las cookies del cliente actual
 	h.clearRefreshTokenCookie(c)
 	h.clearAccessTokenCookie(c)

@@ -102,6 +102,11 @@ func main() {
 		repo = repository.NewRepository(nil)
 	}
 
+	cachedPermisoRepo := repository.NewCachedPermisoRepository(repo.Permiso)
+	cachedRolRepo := repository.NewCachedRolRepository(repo.Rol)
+	cachedModuloRepo := repository.NewCachedModuloRepository(repo.Modulo)
+	cachedUsuarioRepo := repository.NewCachedUsuarioRepository(repo.Usuario)
+
 	instHandler := handlers.NewInstitucionHandler(repo.Institucion)
 	sedeHandler := handlers.NewSedeHandler(repo.Sede)
 	gradoHandler := handlers.NewGradoHandler(repo.Grado)
@@ -117,18 +122,18 @@ func main() {
 	calificacionHandler := handlers.NewCalificacionHandler()
 	cargaHandler := handlers.NewCargaAcademicaHandler()
 	horarioHandler := handlers.NewHorarioHandler()
-	usuarioHandler := handlers.NewUsuarioHandler(repo.Usuario)
+	usuarioHandler := handlers.NewUsuarioHandler(cachedUsuarioRepo, cachedUsuarioRepo, cachedUsuarioRepo)
 	acudienteHandler := handlers.NewAcudienteHandler()
-	authHandler := handlers.NewAuthHandler(cfg, repo.Usuario, repo.Permiso, repo.Rol, repo.RefreshToken, repo.RevokedToken)
-	configHandler := handlers.NewConfigHandler(repo.Rol, repo.Permiso, repo.Modulo)
+	authHandler := handlers.NewAuthHandler(cfg, cachedUsuarioRepo, cachedPermisoRepo, cachedRolRepo, repo.RefreshToken, repo.RevokedToken)
+	configHandler := handlers.NewConfigHandler(cachedRolRepo, cachedRolRepo, cachedPermisoRepo, cachedPermisoRepo, cachedRolRepo, cachedModuloRepo, cachedUsuarioRepo, repo.RefreshToken, repo.RevokedToken)
 
 	e.POST("/auth/login", authHandler.Login)
 	e.POST("/auth/refresh", authHandler.Refresh)
 	e.POST("/auth/logout", authHandler.Logout)
-	e.POST("/auth/logout-all", authHandler.LogoutAll, middleware.JWTAuth(cfg))
+	e.POST("/auth/logout-all", authHandler.LogoutAll, middleware.JWTAuth(cfg, repo.RevokedToken))
 
 	api := e.Group("/api/v1")
-	api.Use(middleware.JWTAuth(cfg))
+	api.Use(middleware.JWTAuth(cfg, repo.RevokedToken))
 
 	adminAPI := api.Group("")
 	adminAPI.Use(middleware.RequireRole("ADMIN", "SECRETARIA", "DIRECTOR"))

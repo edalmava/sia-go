@@ -370,13 +370,13 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	AccessToken  string   `json:"access_token"`
-	TokenType    string   `json:"token_type"`
-	ExpiresIn    int      `json:"expires_in"`
-	NombreUsuario string  `json:"nombre_usuario"`
-	Role         string   `json:"role"`
-	IDRol        int      `json:"id_rol"`
-	Permisos     []string `json:"permisos"`
+	AccessToken   string   `json:"access_token"`
+	TokenType     string   `json:"token_type"`
+	ExpiresIn     int      `json:"expires_in"`
+	NombreUsuario string   `json:"nombre_usuario"`
+	Role          string   `json:"role"`
+	IDRol         int      `json:"id_rol"`
+	Permisos      []string `json:"permisos"`
 }
 
 type RefreshTokenRequest struct {
@@ -384,13 +384,13 @@ type RefreshTokenRequest struct {
 }
 
 type RefreshTokenResponse struct {
-	AccessToken  string   `json:"access_token"`
-	TokenType    string   `json:"token_type"`
-	ExpiresIn    int      `json:"expires_in"`
-	NombreUsuario string  `json:"nombre_usuario"`
-	Role         string   `json:"role"`
-	IDRol        int      `json:"id_rol"`
-	Permisos     []string `json:"permisos"`
+	AccessToken   string   `json:"access_token"`
+	TokenType     string   `json:"token_type"`
+	ExpiresIn     int      `json:"expires_in"`
+	NombreUsuario string   `json:"nombre_usuario"`
+	Role          string   `json:"role"`
+	IDRol         int      `json:"id_rol"`
+	Permisos      []string `json:"permisos"`
 }
 
 type RefreshTokenDB struct {

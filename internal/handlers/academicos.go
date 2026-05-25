@@ -647,12 +647,19 @@ func (h *HorarioHandler) GetByGrupo(c echo.Context) error {
 	return c.JSON(http.StatusOK, []models.Horario{})
 }
 
-type UsuarioHandler struct {
-	repo *repository.UsuarioRepository
+type usuarioCacheInvalidator interface {
+	InvalidateUser(id int)
+	InvalidateAll()
 }
 
-func NewUsuarioHandler(repo *repository.UsuarioRepository) *UsuarioHandler {
-	return &UsuarioHandler{repo: repo}
+type UsuarioHandler struct {
+	repo   repository.UsuarioReader
+	writer repository.UsuarioWriter
+	cache  usuarioCacheInvalidator
+}
+
+func NewUsuarioHandler(reader repository.UsuarioReader, writer repository.UsuarioWriter, cache usuarioCacheInvalidator) *UsuarioHandler {
+	return &UsuarioHandler{repo: reader, writer: writer, cache: cache}
 }
 
 func (h *UsuarioHandler) GetAll(c echo.Context) error {
@@ -754,12 +761,16 @@ func (h *UsuarioHandler) Create(c echo.Context) error {
 		})
 	}
 
-	if err := h.repo.Create(&u); err != nil {
+	if err := h.writer.Create(&u); err != nil {
 		c.Logger().Errorf("Error creating usuario: %v", err)
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "internal_error",
 			Message: "Error al crear el usuario",
 		})
+	}
+
+	if h.cache != nil {
+		h.cache.InvalidateAll()
 	}
 
 	claims := middleware.GetClaims(c)
@@ -808,11 +819,15 @@ func (h *UsuarioHandler) Update(c echo.Context) error {
 		IDRol:         req.IDRol,
 	}
 
-	if err := h.repo.Update(&u); err != nil {
+	if err := h.writer.Update(&u); err != nil {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "internal_error",
 			Message: "Error al actualizar the usuario",
 		})
+	}
+
+	if h.cache != nil {
+		h.cache.InvalidateAll()
 	}
 
 	claims := middleware.GetClaims(c)
@@ -845,11 +860,15 @@ func (h *UsuarioHandler) Delete(c echo.Context) error {
 		})
 	}
 
-	if err := h.repo.Delete(id); err != nil {
+	if err := h.writer.Delete(id); err != nil {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "internal_error",
 			Message: "Error al eliminar el usuario",
 		})
+	}
+
+	if h.cache != nil {
+		h.cache.InvalidateAll()
 	}
 
 	if claims != nil {
@@ -922,11 +941,15 @@ func (h *UsuarioHandler) ChangePassword(c echo.Context) error {
 		})
 	}
 
-	if err := h.repo.UpdatePassword(targetID, hash); err != nil {
+	if err := h.writer.UpdatePassword(targetID, hash); err != nil {
 		return c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error:   "internal_error",
 			Message: "Error al actualizar la contraseña",
 		})
+	}
+
+	if h.cache != nil {
+		h.cache.InvalidateUser(targetID)
 	}
 
 	c.Logger().Infof("AUDIT: Usuario '%s' (ID: %d) cambió contraseña del usuario ID: %d",
